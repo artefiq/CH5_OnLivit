@@ -52,7 +52,7 @@ extension AppItem {
 
 // MARK: - View Model
 
-final class DashboardViewModel: ObservableObject {
+final class DashboardScrollableViewModel: ObservableObject {
     @Published var apps: [AppItem] = AppItem.sample
     @Published var selectedApp: AppItem?
     
@@ -70,8 +70,8 @@ extension Array {
 
 // MARK: - Dashboard Screen
 
-struct DashboardView: View {
-    @StateObject private var viewModel = DashboardViewModel()
+struct DashboardScrollableView: View {
+    @StateObject private var viewModel = DashboardScrollableViewModel()
     
     var body: some View {
         ZStack {
@@ -305,8 +305,8 @@ struct AppCardView: View {
 
 // MARK: - Preview
 
-struct DashboardView_Previews: PreviewProvider {
+struct DashboardScrollableView_Previews: PreviewProvider {
     static var previews: some View {
-        DashboardView()
+        DashboardScrollableView()
     }
 }
