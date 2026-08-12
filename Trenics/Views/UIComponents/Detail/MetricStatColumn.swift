@@ -28,7 +28,6 @@ struct MetricStatColumn: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundColor(valueColor)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

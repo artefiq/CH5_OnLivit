@@ -30,8 +30,6 @@ struct AppMetricsView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
 
-                    BackCircleButton()
-
                     header
 
                     AppDetailTabControl(selected: $selectedTab)
@@ -47,8 +45,6 @@ struct AppMetricsView: View {
                 .padding(.bottom, 12)
             }
         }
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Header
