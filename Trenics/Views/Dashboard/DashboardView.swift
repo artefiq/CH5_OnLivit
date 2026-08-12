@@ -68,7 +68,12 @@ struct DashboardView: View {
                             
                             VStack(spacing: 16) {
                                 ForEach(viewModel.apps) { app in
-                                    AppListRowView(app: app)
+                                    NavigationLink {
+                                        AppMetricsView(app: app)
+                                    } label: {
+                                        AppListRowView(app: app)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
                             
