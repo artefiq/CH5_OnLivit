@@ -39,21 +39,25 @@ struct MetricLineChartView: View {
         }
         .chartYScale(domain: 0...yAxisMax)
         .chartYAxis {
-            AxisMarks(position: .leading, values: .stride(by: yStride)) { _ in
-                AxisGridLine().foregroundStyle(Color.gray.opacity(0.18))
-                AxisValueLabel()
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            AxisMarks(position: .leading, values: .stride(by: yStride)) { value in
+                AxisGridLine().foregroundStyle(Color.primary.opacity(0.5))
+                AxisValueLabel {
+                    if let yVal = value.as(Double.self) {
+                        Text("\(yVal, specifier: "%g")")
+                            .font(.caption2)
+                            .foregroundStyle(.primary.opacity(0.8))
+                    }
+                }
             }
         }
         .chartXAxis {
             AxisMarks(values: points.map(\.week)) { value in
-                AxisGridLine().foregroundStyle(Color.gray.opacity(0.12))
+                AxisGridLine().foregroundStyle(Color.gray.opacity(0.8))
                 AxisValueLabel {
                     if let week = value.as(Int.self) {
                         Text("\(week)")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary.opacity(0.8))
                     }
                 }
             }
