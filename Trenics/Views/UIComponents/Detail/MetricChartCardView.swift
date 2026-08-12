@@ -56,11 +56,13 @@ struct MetricChartCardView: View {
 
                 HStack {
                     MetricStatColumn(label: "Current", value: series.cardCurrentValue)
+                    Spacer()
                     MetricStatColumn(
                         label: "vs previous \(series.range.label)",
                         value: series.vsPreviousText,
                         valueColor: series.isVsPreviousPositive ? .green : .red
                     )
+                    Spacer()
                     MetricStatColumn(
                         label: "avg change",
                         value: series.avgChangeText,

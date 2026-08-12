@@ -31,8 +31,6 @@ struct MetricDetailView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
 
-                    BackCircleButton()
-
                     heroCard
 
                     insightCard
@@ -45,8 +43,6 @@ struct MetricDetailView: View {
                 .padding(.bottom, 12)
             }
         }
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Hero
@@ -118,17 +114,20 @@ struct MetricDetailView: View {
 
             Divider()
 
-            HStack {
+            HStack(alignment: .top, spacing: 16) {
                 MetricStatColumn(
                     label: "vs previous \(selectedRange.label)",
                     value: series.vsPreviousText,
                     valueColor: series.isVsPreviousPositive ? .green : .red
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
                 MetricStatColumn(
                     label: "avg change",
                     value: series.avgChangeText,
                     valueColor: series.isAvgChangePositive ? .green : .red
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(16)
