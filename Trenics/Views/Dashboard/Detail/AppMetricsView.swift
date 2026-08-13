@@ -8,7 +8,7 @@
 //  or in the full "All Apps" list. Shows the app identity header, then a
 //  "Key Metrics" tab with tappable Rating / Downloads / Rankings cards
 //  (each of which pushes Screen 3, MetricDetailView) and a "Review" tab
-//  with recent reviews.
+//  summarizing sentiment, top complaint themes, and next actions.
 //
 
 import SwiftUI
@@ -87,13 +87,62 @@ struct AppMetricsView: View {
     // MARK: - Review tab
 
     private var reviewSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Recent reviews")
+        let data = ReviewSummaryMockData.data
+
+        return VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Review")
+                    .font(.title3.bold())
+                Spacer()
+                Text(data.updatedLabel)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 16) {
+                Text(data.headline)
+                    .font(.title3)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    SentimentBarView(breakdown: data.sentiment)
+
+                    HStack {
+                        Text("\(data.sentiment.positivePercent)% positive")
+                            .foregroundColor(.green)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("\(data.sentiment.neutralPercent)% neutral")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+
+                        Text("\(data.sentiment.negativePercent)% negative")
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+
+                VStack(spacing: 0) {
+                    ForEach(data.themes) { theme in
+                        ComplaintThemeRowView(theme: theme)
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color("cardBGColor"))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+
+            Text("Next steps")
                 .font(.title3.bold())
 
             VStack(spacing: 12) {
-                ForEach(ReviewMockData.reviews) { review in
-                    ReviewRowView(review: review)
+                ForEach(data.nextSteps) { step in
+                    NextStepCardView(step: step)
                 }
             }
         }
