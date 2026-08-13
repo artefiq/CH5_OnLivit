@@ -38,7 +38,7 @@ struct AccountRowView: View {
                 .font(.title2)
         }
         .padding(0)
-        .listRowBackground(isSelected ? Color.gray.opacity(0.1) : Color.white)
+        .listRowBackground(isSelected ? Color.gray.opacity(0.1) : Color("cardBGColor"))
         .contentShape(Rectangle())
     }
 }

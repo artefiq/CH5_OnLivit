@@ -42,54 +42,78 @@ class ProfileViewModel: ObservableObject {
 // MARK: - MAIN VIEW
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
+    @AppStorage("isDarkMode") private var isDarkMode = false
+    @ObservedObject var accountsStore: AccountsStore
     
     var body: some View {
         MainLayout {
             List {
                 Section {
-                    ForEach(viewModel.accounts) { account in
-                        AccountRowView(
-                            account: account,
-                            isSelected: viewModel.selectedAccountID == account.id
-                        )
-                        .onTapGesture {
-                            viewModel.selectAccount(id: account.id)
+                    if accountsStore.accounts.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .font(.title2)
+                                .foregroundStyle(Color("primaryPurple"))
+
+                            Text("No accounts yet")
+                                .font(.headline)
+
+                            Text("Add your first App Store Connect account to start viewing your app statistics.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .listRowBackground(Color("cardBGColor"))
+                    } else {
+                        ForEach(accountsStore.accounts) { account in
+                            AccountRow2View(
+                                account: account,
+                                isSelected: accountsStore.selectedAccountId == account.id
+                            )
+                            .onTapGesture {
+                                accountsStore.selectedAccountId = account.id
+                            }
                         }
                     }
-                    
+
                     AddAccountRowView()
-                    
+
                 } header: {
                     VStack(alignment: .leading, spacing: 16) {
-                        
+
                         ProfileHeaderInfoView(
-                            initials: viewModel.userInitials,
-                            name: viewModel.userName,
-                            appCount: viewModel.totalApps,
+                            initials: String(accountsStore.selectedAccount?.label.prefix(2) ?? "?"),
+                            name: accountsStore.selectedAccount?.label ?? "No Account",
+                            appCount: accountsStore.selectedAccount?.issuerId ?? "",
                             avatarColor: Color("primaryPurple")
                         )
-                        
+
                         HStack {
                             Text("Accounts")
                                 .font(.title3)
                                 .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
+
                             Spacer()
+
                             Text("Tap to change")
                                 .font(.footnote)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.horizontal, -12)
                     .padding(.bottom, 8)
                 }
+                .listRowBackground(Color("cardBGColor"))
                 
                 Section {
                     PreferenceToggleRowView(
                         title: "Dark Mode",
-                        iconName: "moon.stars.fill",
-                        iconColor: Color("primaryPurple"),
-                        isOn: $viewModel.isDarkMode
+                        iconName: !isDarkMode ? "sun.max.fill":"moon.stars.fill",
+                        iconColor: !isDarkMode ? Color.orange : Color("primaryPurple"),
+                        isOn: $isDarkMode
                     )
                 } header: {
                     Text("Preferences")
@@ -100,6 +124,7 @@ struct ProfileView: View {
                         .padding(.horizontal, -12)
                         .padding(.bottom, 8)
                 }
+                .listRowBackground(Color("cardBGColor"))
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -113,7 +138,7 @@ struct ProfileView: View {
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
-            ProfileView()
+            ProfileView(accountsStore: AccountsStore())
         }
     }
 }
