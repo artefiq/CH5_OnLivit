@@ -94,15 +94,16 @@ struct ProfileView: View {
                             Text("Accounts")
                                 .font(.title3)
                                 .fontWeight(.bold)
-                                .foregroundStyle(.primary)
+                                .foregroundColor(.primary)
 
                             Spacer()
 
                             Text("Tap to change")
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.secondary)
                         }
                     }
+                    .textCase(nil)
                     .padding(.horizontal, -12)
                     .padding(.bottom, 8)
                 }
