@@ -105,7 +105,6 @@ struct ProfileView: View {
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 8)
         }
-        .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

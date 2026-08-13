@@ -12,41 +12,73 @@ struct CredentialsView: View {
     }
 
     var body: some View {
-        Form {
-            Section("App Store Connect API Key") {
-                TextField("Issuer ID", text: $credentials.issuerId)
-                TextField("Key ID", text: $credentials.keyId)
+        MainLayout(){
+            VStack(alignment: .center, spacing: 16) {
+            
+                Image(.appstoreLogo)
+                    .resizable()
+                    .frame(width: 64, height: 64)
+                
+                Text("Connect your App Store account")
+                    .frame(width: 248)
+                    .font(Font.title.bold())
+                    .multilineTextAlignment(.center)
+                
+                Text("We'll use this to read your own app's numbers. Nothing is shared publicly.")
+                    .foregroundColor(Color.gray)
+                    .multilineTextAlignment(.center)
+                
+                Form {
+                    Section("Issuer ID") {
+                        TextField("Issuer ID", text: $credentials.issuerId)
+                    }
+                    
+                    Section("Key ID") {
+                        TextField("Key ID", text: $credentials.keyId)
+                    }
+                    
+                    Section("Private Key (.p8 contents)") {
+                        VStack(alignment: .leading) {
+                            TextEditor(text: $credentials.privateKeyPEM)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(height: 72)
+                                .border(Color.gray.opacity(0.3))
+                            Button("Import .p8 File...") { isImporterPresented = true }
+                        }
+                    }
 
-                VStack(alignment: .leading) {
-                    Text("Private Key (.p8 contents)")
-                    TextEditor(text: $credentials.privateKeyPEM)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(height: 160)
-                        .border(Color.gray.opacity(0.3))
-                    Button("Import .p8 File...") { isImporterPresented = true }
+                    if let statusMessage {
+                        Text(statusMessage).foregroundStyle(.secondary)
+                    }
+                    if let errorMessage {
+                        Text(errorMessage).foregroundStyle(.red)
+                    }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .fileImporter(
+                    isPresented: $isImporterPresented,
+                    allowedContentTypes: [p8Type, .data, .text],
+                    allowsMultipleSelection: false
+                ) { result in
+                    handleImportResult(result)
+                }
+                
+                VStack(spacing: 16){
+                    Button("􀁜 How do I get my Private Key?") { isImporterPresented = true }
+                        .padding(.top, 12)
+                    
+                    PrimaryButton(title: "Save"){
+                        
+                    }
+                }
+                .background(Color.baseBG)
+                .padding(.top, -132)
+                .padding(.horizontal, 16)
             }
-
-            if let statusMessage {
-                Text(statusMessage).foregroundStyle(.secondary)
-            }
-            if let errorMessage {
-                Text(errorMessage).foregroundStyle(.red)
-            }
-
-            Text("Create a key in App Store Connect under Users and Access > Integrations > App Store Connect API. The key needs a role with access to Ratings & Reviews and to Analytics Reports (e.g. Admin or App Manager). Your private key never leaves this device — it's stored in the Keychain and used only to sign requests locally.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            
         }
-        .padding()
-        .frame(maxWidth: 600)
-        .fileImporter(
-            isPresented: $isImporterPresented,
-            allowedContentTypes: [p8Type, .data, .text],
-            allowsMultipleSelection: false
-        ) { result in
-            handleImportResult(result)
-        }
+        
     }
 
     private func handleImportResult(_ result: Result<[URL], Error>) {
