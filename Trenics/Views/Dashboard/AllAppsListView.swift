@@ -10,17 +10,33 @@ import SwiftUI
 struct AllAppsListView: View {
     let apps: [AppItemModel]
     
+    @State private var searchText: String = ""
+    
+    var filteredApps: [AppItemModel] {
+        if searchText.isEmpty {
+            return apps
+        } else {
+            return apps.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+    
     var body: some View {
         MainLayout {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    ForEach(apps) { app in
+                    ForEach(filteredApps) { app in
                         NavigationLink {
                             AppMetricsView(app: app)
                         } label: {
                             AppListRowView(app: app)
                         }
                         .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    if filteredApps.isEmpty {
+                        Text("No apps found")
+                            .foregroundColor(.secondary)
+                            .padding(.top, 40)
                     }
                 }
             }
@@ -29,7 +45,8 @@ struct AllAppsListView: View {
             .padding(.bottom, 24)
         }
         .navigationTitle("All Apps")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .searchable(text: $searchText, prompt: "Search apps...")
     }
 }
