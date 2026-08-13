@@ -10,7 +10,7 @@ import SwiftUI
 struct ProfileHeaderInfoView: View {
     let initials: String
     let name: String
-    let appCount: Int
+    let appCount: String
     let avatarColor: Color
     
     var body: some View {
