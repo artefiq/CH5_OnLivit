@@ -55,8 +55,8 @@ struct DashboardView: View {
                                 }
                                 .padding(.vertical, 0)
                             }
-                            .padding(.horizontal, -16)
-                            .padding(.leading, 16)
+                            .padding(.horizontal, -12)
+                            .padding(.leading, 12)
                             
                             NavigationLink {
                                 AllAppsListView(apps: viewModel.apps)
