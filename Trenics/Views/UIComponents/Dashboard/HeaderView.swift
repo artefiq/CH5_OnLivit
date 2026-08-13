@@ -20,7 +20,7 @@ struct HeaderView: View {
             Spacer()
             
             NavigationLink {
-                ProfileView()
+                ProfileView(accountsStore: AccountsStore())
             } label: {
                 Text(initials)
                     .font(.title2)

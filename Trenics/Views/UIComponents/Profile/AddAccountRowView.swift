@@ -8,29 +8,34 @@
 import SwiftUI
 
 struct AddAccountRowView: View {
+    @StateObject private var credentials = AccountsStore()
+
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                Image(systemName: "plus")
-                    .foregroundColor(.blue)
+        NavigationLink {
+            CredentialsView(accountsStore: credentials)
+        } label: {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "plus")
+                        .foregroundColor(.blue)
+                        .font(.body)
+                        .bold()
+                }
+
+                Text("Add another account")
                     .font(.body)
+                    .foregroundColor(.blue)
                     .bold()
+
+                Spacer()
             }
-            
-            Text("Add another account")
-                .font(.body)
-                .foregroundColor(.blue)
-                .bold()
-            
-            Spacer()
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            print("Tapped Add Account")
-        }
+        .buttonStyle(.plain)
     }
 }
