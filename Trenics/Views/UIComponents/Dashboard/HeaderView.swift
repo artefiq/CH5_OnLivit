@@ -19,13 +19,18 @@ struct HeaderView: View {
             
             Spacer()
             
-            Text(initials)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 48, height: 48)
-                .background(Color("primaryPurple"))
-                .clipShape(Circle())
+            NavigationLink {
+                ProfileView()
+            } label: {
+                Text(initials)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 48)
+                    .background(Color("primaryPurple"))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
 }
