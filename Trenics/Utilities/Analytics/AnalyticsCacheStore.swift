@@ -1,7 +1,7 @@
 import Foundation
 
 /// A cached value plus the moment it was fetched.
-struct CachedPayload<Value: Codable & Sendable>: Codable, Sendable {
+nonisolated struct CachedPayload<Value: Codable & Sendable>: Codable, Sendable {
     let value: Value
     let fetchedAt: Date
 }

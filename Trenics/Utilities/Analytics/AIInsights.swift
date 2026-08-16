@@ -9,19 +9,19 @@ import FoundationModels
 // compiling on SDKs without FoundationModels, and so the UI never has to know
 // whether a value came from the model or from a deterministic fallback.
 
-struct InsightSummary: Sendable, Equatable {
+nonisolated struct InsightSummary: Sendable, Equatable {
     let headline: String
     let detail: String
     let highlight: String
 }
 
-struct InsightSuggestion: Sendable, Equatable {
+nonisolated struct InsightSuggestion: Sendable, Equatable {
     let action: String
     let rationale: String
     let confidence: String
 }
 
-struct ReviewThemeInsight: Identifiable, Sendable, Equatable {
+nonisolated struct ReviewThemeInsight: Identifiable, Sendable, Equatable {
     var id: String { theme }
     let theme: String
     let sentiment: ReviewSentiment
@@ -29,7 +29,7 @@ struct ReviewThemeInsight: Identifiable, Sendable, Equatable {
     let representativeQuote: String
 }
 
-enum InsightAvailability: Sendable, Equatable {
+nonisolated enum InsightAvailability: Sendable, Equatable {
     case available
     case unavailable(String)
 
@@ -45,7 +45,7 @@ enum InsightAvailability: Sendable, Equatable {
 #if canImport(FoundationModels)
 
 @Generable
-struct InsightSummaryOutput {
+nonisolated struct InsightSummaryOutput {
     @Guide(description: "One short sentence stating the single most important change in the numbers. No greeting, no preamble.")
     var headline: String
 
@@ -57,7 +57,7 @@ struct InsightSummaryOutput {
 }
 
 @Generable
-struct InsightSuggestionOutput {
+nonisolated struct InsightSuggestionOutput {
     @Guide(description: "A single concrete action the developer should take next, phrased as an imperative. One sentence.")
     var action: String
 
@@ -69,7 +69,7 @@ struct InsightSuggestionOutput {
 }
 
 @Generable
-struct ReviewThemeOutput {
+nonisolated struct ReviewThemeOutput {
     @Guide(description: "A recurring topic in two or three words, lowercase — for example 'subscription pricing' or 'sync reliability'.")
     var theme: String
 
@@ -84,7 +84,7 @@ struct ReviewThemeOutput {
 }
 
 @Generable
-struct ReviewThemesOutput {
+nonisolated struct ReviewThemesOutput {
     @Guide(description: "The three to five most frequently recurring themes, ordered by how often they appear.")
     var themes: [ReviewThemeOutput]
 }
@@ -274,7 +274,7 @@ actor InsightGenerator {
 
 // MARK: - Per-page instructions
 
-enum InsightInstructions {
+nonisolated enum InsightInstructions {
     static let discoverySummary = """
     You analyse App Store discovery funnels for an app developer. Be specific and \
     quantitative. Reference only the figures supplied. Two or three sentences total, \
