@@ -114,8 +114,14 @@ final class AppStoreConnectClient {
         return try decode(JSONAPIResponse<AnalyticsReportResource>.self, from: data).data
     }
 
-    func fetchInstances(reportId: String, granularity: String = "DAILY") async throws -> [AnalyticsReportInstanceResource] {
-        let data = try await request("\(baseURL)/analyticsReports/\(reportId)/instances?filter[granularity]=\(granularity)&limit=30")
+    func fetchInstances(
+        reportId: String,
+        granularity: ReportGranularity = .daily,
+        limit: Int = 30
+    ) async throws -> [AnalyticsReportInstanceResource] {
+        let data = try await request(
+            "\(baseURL)/analyticsReports/\(reportId)/instances?filter[granularity]=\(granularity.rawValue)&limit=\(limit)"
+        )
         return try decode(JSONAPIResponse<AnalyticsReportInstanceResource>.self, from: data).data
     }
 
@@ -132,6 +138,21 @@ final class AppStoreConnectClient {
             throw APIError.httpError((response as? HTTPURLResponse)?.statusCode ?? -1, "Segment download failed")
         }
         return data
+    }
+
+    // MARK: Developer Responses
+
+    /// Returns `nil` when the review has no developer response. The relationship
+    /// endpoint answers with `{"data": null}` in that case, and some accounts
+    /// return 404 instead — both mean "not answered yet", not an error.
+    func fetchReviewResponse(reviewId: String) async throws -> CustomerReviewResponseAttributes? {
+        do {
+            let data = try await request("\(baseURL)/customerReviews/\(reviewId)/response")
+            let decoded = try decode(JSONAPIOptionalSingleResponse<CustomerReviewResponseResource>.self, from: data)
+            return decoded.data?.attributes
+        } catch APIError.httpError(404, _) {
+            return nil
+        }
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
