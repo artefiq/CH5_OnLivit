@@ -98,7 +98,8 @@ final class ReviewsPageModel: ObservableObject {
     @Published private(set) var metrics = ReviewMetrics()
     @Published private(set) var reviews: [CustomerReview] = []
     @Published private(set) var themes: [ReviewThemeInsight] = []
-    @Published private(set) var responses: [String: CustomerReviewResponseAttributes?] = [:]
+    /// Review id → developer reply body. A stored `nil` means "checked, no reply".
+    @Published private(set) var responses: [String: String?] = [:]
     @Published private(set) var loadingResponses: Set<String> = []
     @Published private(set) var lastUpdated: Date?
     @Published private(set) var isLoading = false
@@ -170,9 +171,8 @@ final class ReviewsPageModel: ObservableObject {
         loadingResponses.insert(id)
         defer { loadingResponses.remove(id) }
         do {
-            let client = try session.makeClient()
-            let response = try await client.fetchReviewResponse(reviewId: id)
-            responses[id] = response
+            let response = try await session.makeAnalyticsClient().fetchReviewResponse(reviewId: id)
+            responses[id] = .some(response?.attributes.responseBody)
         } catch {
             // A failed lookup just leaves the card showing "Not answered".
             responses[id] = .some(nil)
@@ -183,7 +183,7 @@ final class ReviewsPageModel: ObservableObject {
         loadingResponses.contains(review.id)
     }
 
-    func response(for review: CustomerReview) -> CustomerReviewResponseAttributes? {
+    func response(for review: CustomerReview) -> String? {
         responses[review.id] ?? nil
     }
 

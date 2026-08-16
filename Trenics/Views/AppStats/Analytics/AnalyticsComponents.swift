@@ -639,7 +639,8 @@ struct FlowLayout: Layout {
 
 struct ReviewCard: View {
     let review: CustomerReview
-    let response: CustomerReviewResponseAttributes?
+    /// The developer's reply body, or nil when there isn't one.
+    let response: String?
     let isLoadingResponse: Bool
 
     var body: some View {
@@ -687,7 +688,7 @@ struct ReviewCard: View {
             Label("Checking for a response…", systemImage: "ellipsis.bubble")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
-        } else if let body = response?.responseBody, !body.isEmpty {
+        } else if let body = response, !body.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 Label("Your response", systemImage: "arrowshape.turn.up.left.fill")
                     .font(.caption2.bold())

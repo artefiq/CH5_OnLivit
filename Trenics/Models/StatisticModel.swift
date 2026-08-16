@@ -11,12 +11,6 @@ nonisolated struct JSONAPISingleResponse<T: Codable>: Codable {
     let data: T
 }
 
-/// Relationship endpoints (e.g. a review's developer response) return
-/// `{"data": null}` rather than a 404 when nothing exists yet.
-nonisolated struct JSONAPIOptionalSingleResponse<T: Codable>: Codable {
-    let data: T?
-}
-
 nonisolated struct PagingLinks: Codable {
     let next: String?
 }
@@ -56,18 +50,8 @@ nonisolated struct ReviewAttributes: Codable, Hashable, Sendable {
     let territory: String?
 }
 
-// MARK: - Developer Responses
-
-nonisolated struct CustomerReviewResponseResource: Codable, Identifiable, Sendable {
-    let id: String
-    let attributes: CustomerReviewResponseAttributes?
-}
-
-nonisolated struct CustomerReviewResponseAttributes: Codable, Sendable {
-    let responseBody: String?
-    let lastModifiedDate: String?
-    let state: String?
-}
+// Developer responses are modelled by `CustomerReviewResponseResource` in
+// AnalyticsModel.swift and fetched through `AnalyticsAPIClient`.
 
 // MARK: - Analytics Report Requests
 

@@ -1,6 +1,13 @@
 import Foundation
 internal import Combine
 
+extension APIAccount {
+    /// All three fields are needed before any request can be signed.
+    var isUsable: Bool {
+        !issuerId.isEmpty && !keyId.isEmpty && !privateKeyPEM.isEmpty
+    }
+}
+
 enum AnalyticsError: LocalizedError {
     case credentialsIncomplete
     case reportUnavailable(ReportMetric)
@@ -28,7 +35,7 @@ enum AnalyticsError: LocalizedError {
 @MainActor
 final class AnalyticsSession: ObservableObject {
     let app: AppResource
-    let credentials: CredentialsStore
+    let account: APIAccount
 
     private var client: AppStoreConnectClient?
     private var handshake: Task<Handshake, Error>?
@@ -38,18 +45,27 @@ final class AnalyticsSession: ObservableObject {
         let reports: [AnalyticsReportResource]
     }
 
-    init(app: AppResource, credentials: CredentialsStore) {
+    init(app: AppResource, account: APIAccount) {
         self.app = app
-        self.credentials = credentials
+        self.account = account
     }
 
     /// Reuses a single client so the JWT-signing inputs stay consistent.
     func makeClient() throws -> AppStoreConnectClient {
-        guard credentials.isComplete else { throw AnalyticsError.credentialsIncomplete }
+        guard account.isUsable else { throw AnalyticsError.credentialsIncomplete }
         if let client { return client }
-        let created = credentials.makeClient()
+        let created = AppStoreConnectClient(
+            issuerId: account.issuerId,
+            keyId: account.keyId,
+            privateKeyPEM: account.privateKeyPEM
+        )
         client = created
         return created
+    }
+
+    /// The reviews endpoints live on the account-scoped client.
+    func makeAnalyticsClient() -> AnalyticsAPIClient {
+        AnalyticsAPIClient(account: account)
     }
 
     /// Concurrent callers share one in-flight handshake rather than racing to

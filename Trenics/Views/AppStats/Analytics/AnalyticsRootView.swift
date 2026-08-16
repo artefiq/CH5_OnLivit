@@ -12,14 +12,14 @@ internal import Combine
 /// Store Connect happens once no matter how often the user switches tabs.
 struct AnalyticsRootView: View {
     let app: AppResource
-    @ObservedObject var credentials: CredentialsStore
+    let account: APIAccount
     @StateObject private var session: AnalyticsSession
     @State private var selection: AnalyticsPage = .impressions
 
-    init(app: AppResource, credentials: CredentialsStore) {
+    init(app: AppResource, account: APIAccount) {
         self.app = app
-        self.credentials = credentials
-        _session = StateObject(wrappedValue: AnalyticsSession(app: app, credentials: credentials))
+        self.account = account
+        _session = StateObject(wrappedValue: AnalyticsSession(app: app, account: account))
     }
 
     enum AnalyticsPage: Hashable {
@@ -28,7 +28,7 @@ struct AnalyticsRootView: View {
 
     var body: some View {
         Group {
-            if credentials.isComplete {
+            if account.isUsable {
                 TabView(selection: $selection) {
                     ImpressionsPageView(session: session)
                         .tabItem { Label("Impressions", systemImage: "eye") }
@@ -48,23 +48,14 @@ struct AnalyticsRootView: View {
         }
         .navigationTitle(app.attributes.name)
         .navigationBarTitleDisplayMode(.inline)
-        // A credential change invalidates the cached handshake and client.
-        .onChange(of: credentials.keyId) { _, _ in session.reset() }
-        .onChange(of: credentials.issuerId) { _, _ in session.reset() }
     }
 
     private var missingCredentials: some View {
-        VStack(spacing: 16) {
-            AnalyticsEmptyState(
-                systemImage: "key.horizontal",
-                title: "API key needed",
-                message: "Add your App Store Connect issuer ID, key ID and .p8 private key to load analytics for this app."
-            )
-            NavigationLink("Open Credentials") {
-                CredentialsView(credentials: credentials)
-            }
-            .buttonStyle(.borderedProminent)
-        }
+        AnalyticsEmptyState(
+            systemImage: "key.horizontal",
+            title: "API key needed",
+            message: "The account \"\(account.label)\" is missing an issuer ID, key ID or .p8 private key. Add them from the Accounts screen to load analytics."
+        )
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color("baseBGColor").ignoresSafeArea())
