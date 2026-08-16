@@ -29,6 +29,9 @@ struct AnalyticsRootView: View {
     var body: some View {
         Group {
             if account.isUsable {
+                // MainLayout is applied inside each page rather than around the
+                // TabView: the TabView paints its own opaque background over
+                // anything behind it, so decoration placed out here is hidden.
                 TabView(selection: $selection) {
                     ImpressionsPageView(session: session)
                         .tabItem { Label("Impressions", systemImage: "eye") }
@@ -51,13 +54,14 @@ struct AnalyticsRootView: View {
     }
 
     private var missingCredentials: some View {
-        AnalyticsEmptyState(
-            systemImage: "key.horizontal",
-            title: "API key needed",
-            message: "The account \"\(account.label)\" is missing an issuer ID, key ID or .p8 private key. Add them from the Accounts screen to load analytics."
-        )
-        .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("baseBGColor").ignoresSafeArea())
+        MainLayout {
+            AnalyticsEmptyState(
+                systemImage: "key.horizontal",
+                title: "API key needed",
+                message: "The account \"\(account.label)\" is missing an issuer ID, key ID or .p8 private key. Add them from the Accounts screen to load analytics."
+            )
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }

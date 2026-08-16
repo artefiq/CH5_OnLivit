@@ -239,33 +239,36 @@ struct ReviewsPageView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                header
+        MainLayout {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    header
 
-                if let errorMessage = model.errorMessage {
-                    ErrorBanner(message: errorMessage)
-                } else if model.isLoading && !model.metrics.hasData {
-                    ProgressView("Loading reviews…")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
-                } else if !model.metrics.hasData {
-                    AnalyticsEmptyState(
-                        systemImage: "star.bubble",
-                        title: "No reviews yet",
-                        message: "This app has no customer reviews in the selected period."
-                    )
-                } else {
-                    content
+                    if let errorMessage = model.errorMessage {
+                        ErrorBanner(message: errorMessage)
+                    } else if model.isLoading && !model.metrics.hasData {
+                        ProgressView("Loading reviews…")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                    } else if !model.metrics.hasData {
+                        AnalyticsEmptyState(
+                            systemImage: "star.bubble",
+                            title: "No reviews yet",
+                            message: "This app has no customer reviews in the selected period."
+                        )
+                    } else {
+                        content
+                    }
                 }
+                .padding(20)
             }
-            .padding(20)
-        }
-        .background(Color("baseBGColor").ignoresSafeArea())
-        .task { await model.loadIfNeeded() }
-        .refreshable { await model.refresh() }
-        .onChange(of: model.range) { _, _ in
-            model.rangeChanged()
+            // Kept transparent so MainLayout's texture shows through.
+            .scrollContentBackground(.hidden)
+            .task { await model.loadIfNeeded() }
+            .refreshable { await model.refresh() }
+            .onChange(of: model.range) { _, _ in
+                model.rangeChanged()
+            }
         }
     }
 

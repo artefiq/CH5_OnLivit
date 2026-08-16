@@ -298,37 +298,40 @@ struct RetentionPageView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
+        MainLayout {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    header
 
-                if let errorMessage = model.errorMessage {
-                    ErrorBanner(message: errorMessage)
-                } else if model.isLoading && !model.metrics.hasData {
-                    ProgressView("Loading retention data…")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
-                } else if !model.metrics.hasData {
-                    AnalyticsEmptyState(
-                        systemImage: "arrow.trianglehead.counterclockwise",
-                        title: "No usage data yet",
-                        message: "Apple hasn't produced session, retention or deletion data for this app in the selected period."
-                    )
-                } else {
-                    content
-                }
+                    if let errorMessage = model.errorMessage {
+                        ErrorBanner(message: errorMessage)
+                    } else if model.isLoading && !model.metrics.hasData {
+                        ProgressView("Loading retention data…")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                    } else if !model.metrics.hasData {
+                        AnalyticsEmptyState(
+                            systemImage: "arrow.trianglehead.counterclockwise",
+                            title: "No usage data yet",
+                            message: "Apple hasn't produced session, retention or deletion data for this app in the selected period."
+                        )
+                    } else {
+                        content
+                    }
 
-                ForEach(model.warnings, id: \.self) { warning in
-                    ErrorBanner(message: warning)
+                    ForEach(model.warnings, id: \.self) { warning in
+                        ErrorBanner(message: warning)
+                    }
                 }
+                .padding(20)
             }
-            .padding(20)
-        }
-        .background(Color("baseBGColor").ignoresSafeArea())
-        .task { await model.loadIfNeeded() }
-        .refreshable { await model.refresh() }
-        .onChange(of: model.range) { _, _ in
-            Task { await model.rangeChanged() }
+            // Kept transparent so MainLayout's texture shows through.
+            .scrollContentBackground(.hidden)
+            .task { await model.loadIfNeeded() }
+            .refreshable { await model.refresh() }
+            .onChange(of: model.range) { _, _ in
+                Task { await model.rangeChanged() }
+            }
         }
     }
 
