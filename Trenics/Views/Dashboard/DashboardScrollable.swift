@@ -4,8 +4,6 @@ internal import Combine
 
 // MARK: - Haptics
 
-/// Centralized haptic feedback so the generator can be prepped ahead of time
-/// (reduces the trigger latency) and reused across the carousel.
 enum HapticManager {
     private static let generator = UIImpactFeedbackGenerator(style: .medium)
     
@@ -57,7 +55,6 @@ final class DashboardScrollableViewModel: ObservableObject {
     @Published var selectedApp: AppItem?
     
     init() {
-        // Default selection: the middle-most app, matching initial scroll position.
         selectedApp = apps[safe: apps.count / 2]
     }
 }
@@ -76,6 +73,30 @@ struct DashboardScrollableView: View {
     var body: some View {
         ZStack {
             MainLayout{
+                HStack {
+                    Text("Hello, Onlivit")
+                        .font(Font.title.bold())
+                    Spacer()
+                    Button(action: {
+                        HapticManager.selectionChanged()
+                    }) {
+                        Text("ON")
+                            .font(Font.title2.bold())
+                            .foregroundStyle(.white)
+                            .frame(width: 48, height: 48)
+                            .background(
+                                Circle()
+                                    .fill(Color.purple)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
+                
                 QuickSummaryCard(app: viewModel.selectedApp)
                     .padding(.horizontal, 16)
                 
@@ -95,7 +116,7 @@ struct QuickSummaryCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Quick Summary")
                 .font(.title2.bold())
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
             
             Divider()
             
@@ -112,15 +133,34 @@ struct QuickSummaryCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(app.name)
                             .font(.headline)
-                            .foregroundColor(.black)
-                        Text(app.description)
+                            .foregroundColor(.primary)
+                        Text("Download trends")
                             .font(.caption)
                             .foregroundColor(.gray)
                             .lineLimit(2)
                     }
+                    
                     Spacer()
+                    
+                    Text("-20%")
+                        .font(Font.title3.bold())
+                        .foregroundColor(Color(UIColor.systemRed))
+                    Image(systemName: "arrow.down.right")
+                        .font(Font.title3.bold())
+                        .foregroundColor(Color(UIColor.systemRed))
                 }
                 .padding(.top, 4)
+                
+                Divider()
+                
+                DownloadTrendChart()
+                    .padding(.top, 12)
+                
+                Text("Downloads showed a strong upward trend, rising from around 40 to nearly 100. After reaching a peak, downloads declined by 20% in the latest period, suggesting a recent slowdown in growth. Overall, the app is still performing well, but the recent decline may be worth monitoring closely.")
+                    .padding(.top, 4)
+                    .font(.caption)
+                
+                
                 // Animate the swap whenever the selected app changes.
                 .id(app.id)
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -136,7 +176,7 @@ struct QuickSummaryCard: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color(red: 0.98, green: 0.97, blue: 1.0))
+                .fill(Color("cardBGColor"))
         )
         .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
         .animation(.easeInOut(duration: 0.25), value: app?.id)
@@ -145,21 +185,15 @@ struct QuickSummaryCard: View {
 
 // MARK: - My Apps Carousel
 
-/// A vertically scrolling list where the item nearest the visual center of
-/// the scroll container is emphasized (scaled up, full opacity, highlighted
-/// border) and becomes the `selectedApp`.
 struct MyAppsCarousel: View {
     let apps: [AppItem]
     @Binding var selectedApp: AppItem?
     
-    // Card metrics
     private let cardHeight: CGFloat = 96
     private let cardSpacing: CGFloat = 8
     private var itemHeight: CGFloat { cardHeight + cardSpacing }
     
-    // The index currently locked to the center position.
     @State private var selectedIndex: Int
-    // Live finger-drag offset, added on top of the locked position while dragging.
     @State private var dragOffset: CGFloat = 0
     
     init(apps: [AppItem], selectedApp: Binding<AppItem?>) {
@@ -172,7 +206,7 @@ struct MyAppsCarousel: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("My Apps")
                 .font(.title2.bold())
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
             
@@ -181,13 +215,8 @@ struct MyAppsCarousel: View {
             
             GeometryReader { outerGeo in
                 let containerHeight = outerGeo.size.height
-                // Offset that places `selectedIndex`'s card exactly at the
-                // vertical center of the container — this is the fixed
-                // "snap" position every card settles into.
                 let baseOffset = (containerHeight / 2) - (cardHeight / 2)
                 - (CGFloat(selectedIndex) * itemHeight)
-                // Fractional index representing the current visual position
-                // (used for smooth scale/opacity while dragging).
                 let continuousIndex = CGFloat(selectedIndex) - (dragOffset / itemHeight)
                 
                 VStack(spacing: cardSpacing) {
@@ -210,7 +239,6 @@ struct MyAppsCarousel: View {
                             dragOffset = value.translation.height
                         }
                         .onEnded { value in
-                            // How many full cards did the drag/flick cross?
                             let projected = value.predictedEndTranslation.height
                             let indexShift = Int((-projected / itemHeight).rounded())
                             let newIndex = min(max(selectedIndex + indexShift, 0), apps.count - 1)
@@ -233,7 +261,7 @@ struct MyAppsCarousel: View {
         .frame(height: 264)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color(red: 0.98, green: 0.97, blue: 1.0))
+                .fill(Color("cardBGColor"))
         )
         .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
         .onAppear {
@@ -249,7 +277,6 @@ struct MyAppsCarousel: View {
 
 struct AppCardView: View {
     let app: AppItem
-    /// 1.0 when perfectly centered, tapering to 0.0 at the edges.
     let proximity: CGFloat
     let isSelected: Bool
     
@@ -275,11 +302,11 @@ struct AppCardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name)
                     .font(.headline)
-                    .foregroundColor(isSelected ? Color(red: 0.42, green: 0.2, blue: 0.65) : .black)
+                    .foregroundColor(isSelected ? Color("primaryPurple") : .primary)
                 
                 Text(app.description)
                     .font(.caption)
-                    .foregroundColor(isSelected ? Color(red: 0.6, green: 0.5, blue: 0.75) : .gray)
+                    .foregroundColor(.gray)
                     .lineLimit(2)
             }
             Spacer()
@@ -287,12 +314,12 @@ struct AppCardView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white)
+                .fill(Color("cardColor"))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(
-                    isSelected ? Color(red: 0.72, green: 0.55, blue: 0.93) : Color.gray.opacity(0.15),
+                    isSelected ? Color("primaryPurple") : Color.gray.opacity(0.15),
                     lineWidth: isSelected ? 2 : 1
                 )
         )

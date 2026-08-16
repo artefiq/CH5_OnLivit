@@ -5,9 +5,9 @@ import SwiftUI
 /// navigation entry point.
 struct AppDetailView: View {
     let app: AppResource
-    @ObservedObject var credentials: CredentialsStore
+    let account: APIAccount
 
     var body: some View {
-        AnalyticsRootView(app: app, credentials: credentials)
+        AnalyticsRootView(app: app, account: account)
     }
 }
