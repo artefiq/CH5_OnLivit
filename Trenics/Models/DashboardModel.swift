@@ -26,12 +26,17 @@ struct AppItemModel: Identifiable {
     let name: String
     let description: String
     let iconName: String
+    /// The App Store Connect resource this row came from, kept so tapping the
+    /// row can open analytics for the real app. `nil` for samples and previews,
+    /// which have no counterpart on the API.
+    let resource: AppResource?
 
     init(id: String = UUID().uuidString, name: String, description: String, iconName: String) {
         self.id = id
         self.name = name
         self.description = description
         self.iconName = iconName
+        self.resource = nil
     }
 
     /// Maps an app fetched from App Store Connect onto the dashboard's row model.
@@ -42,5 +47,6 @@ struct AppItemModel: Identifiable {
         self.name = app.attributes.name
         self.description = app.attributes.bundleId ?? app.attributes.sku ?? ""
         self.iconName = "circle.hexagongrid.fill"
+        self.resource = app
     }
 }

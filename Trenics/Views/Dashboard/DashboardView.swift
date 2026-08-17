@@ -91,7 +91,10 @@ struct DashboardView: View {
                             .padding(.leading, 12)
                             
                             NavigationLink {
-                                AllAppsListView(apps: viewModel.apps)
+                                AllAppsListView(
+                                    apps: viewModel.apps,
+                                    account: accountsStore.selectedAccount
+                                )
                             } label: {
                                 SectionHeaderView(title: "Your Apps")
                                     .contentShape(Rectangle())
@@ -101,7 +104,10 @@ struct DashboardView: View {
                             VStack(spacing: 16) {
                                 ForEach(viewModel.apps) { app in
                                     NavigationLink {
-                                        AppMetricsView(app: app)
+                                        AppRowDestination(
+                                            app: app,
+                                            account: accountsStore.selectedAccount
+                                        )
                                     } label: {
                                         AppListRowView(app: app)
                                     }
