@@ -4,11 +4,6 @@ import FoundationModels
 #endif
 
 // MARK: - View-facing results
-//
-// These are plain structs rather than the @Generable types so the views keep
-// compiling on SDKs without FoundationModels, and so the UI never has to know
-// whether a value came from the model or from a deterministic fallback.
-
 nonisolated struct InsightSummary: Sendable, Equatable {
     let headline: String
     let detail: String
@@ -93,20 +88,9 @@ nonisolated struct ReviewThemesOutput {
 
 // MARK: - Generator
 
-/// Wraps Apple's on-device model.
-///
-/// Everything here runs locally: the aggregated figures for Impressions and
-/// Retention never leave the device, and — more importantly — neither do review
-/// bodies, which are customer-authored content. That's both the privacy-correct
-/// choice and the intended use of the framework.
-///
-/// Every entry point returns an optional and swallows failures. A missing
-/// insight card is a normal state (no Apple Intelligence, model busy, guardrail
-/// tripped), not an error worth interrupting the page for.
 actor InsightGenerator {
     static let shared = InsightGenerator()
 
-    /// Roughly how much review text to feed the model in one pass.
     private let maxReviewsForThemes = 40
     private let maxReviewCharacters = 280
 

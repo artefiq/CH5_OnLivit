@@ -4,8 +4,6 @@ internal import Combine
 
 // MARK: - Derived metrics
 
-/// Everything the Impressions page renders, computed once when tables land so
-/// the view body stays free of aggregation work.
 struct DiscoveryMetrics: Sendable, Equatable {
     var impressions: Double = 0
     var pageViews: Double = 0
@@ -19,9 +17,7 @@ struct DiscoveryMetrics: Sendable, Equatable {
     var deviceBreakdown: [BreakdownItem] = []
     var downloadTypeBreakdown: [BreakdownItem] = []
 
-    /// Impressions → downloads, the number developers mean by "conversion".
     var conversionRate: Double { impressions > 0 ? downloads / impressions : 0 }
-    /// Page view → download, the store-listing-specific step.
     var pageConversionRate: Double { pageViews > 0 ? downloads / pageViews : 0 }
 
     var funnel: [FunnelStage] {
@@ -35,8 +31,6 @@ struct DiscoveryMetrics: Sendable, Equatable {
 
     // MARK: Computation
 
-    /// Both tables are optional — if downloads 403s while impressions succeeds,
-    /// half a page is better than a blank one.
     static func make(
         discovery: ReportTable?,
         downloads downloadsTable: ReportTable?,
@@ -109,12 +103,8 @@ struct DiscoveryMetrics: Sendable, Equatable {
         return metrics
     }
 
-    /// Discovery reports encode impressions and page views as rows of one
-    /// table, distinguished by an Event column. Unique-device variants are
-    /// excluded so totals aren't counted twice.
     private static func eventRows(_ table: ReportTable, eventColumn: Int?, keyword: String) -> [[String]] {
         guard let eventColumn else {
-            // Older/standard variants use dedicated columns instead of an Event column.
             return table.rows
         }
         return table.rows.filter { row in
@@ -123,8 +113,6 @@ struct DiscoveryMetrics: Sendable, Equatable {
         }
     }
 
-    /// Compact fact sheet handed to the on-device model. Aggregates only —
-    /// no raw rows, no identifiers.
     func factSheet(appName: String, range: AnalyticsTimeRange) -> String {
         var lines = [
             "App: \(appName)",
@@ -186,13 +174,11 @@ final class ImpressionsPageModel: ObservableObject {
         self.fetcher = AnalyticsReportFetcher(session: session)
     }
 
-    /// Called from `.task`. A cache hit for today makes no network call at all.
     func loadIfNeeded() async {
         guard loadedRange != range else { return }
         await load(forceRefresh: false)
     }
 
-    /// Called from pull-to-refresh. Always goes to the network.
     func refresh() async {
         await load(forceRefresh: true)
     }
@@ -205,8 +191,6 @@ final class ImpressionsPageModel: ObservableObject {
 
         let range = self.range
 
-        // The two reports are independent, so they're requested together
-        // rather than one after the other.
         async let discovery = fetch(.discovery, range: range, forceRefresh: forceRefresh)
         async let downloads = fetch(.downloads, range: range, forceRefresh: forceRefresh)
         let (discoveryResult, downloadsResult) = await (discovery, downloads)
@@ -230,8 +214,6 @@ final class ImpressionsPageModel: ObservableObject {
             failures.append(error.localizedDescription)
         }
 
-        // Each branch fails independently — one failure degrades the page
-        // rather than blanking it.
         if stamps.isEmpty {
             errorMessage = failures.first
             loadedRange = nil
@@ -278,7 +260,7 @@ final class ImpressionsPageModel: ObservableObject {
         defer { isGeneratingInsights = false }
 
         let facts = metrics.factSheet(appName: session.app.attributes.name, range: range)
-        // Summary and suggestion are independent generations — run them together.
+        
         async let generatedSummary = InsightGenerator.shared.summary(
             instructions: InsightInstructions.discoverySummary, facts: facts
         )
@@ -333,7 +315,6 @@ struct ImpressionsPageView: View {
                 }
                 .padding(20)
             }
-            // Kept transparent so MainLayout's texture shows through.
             .scrollContentBackground(.hidden)
             .task { await model.loadIfNeeded() }
             .refreshable { await model.refresh() }

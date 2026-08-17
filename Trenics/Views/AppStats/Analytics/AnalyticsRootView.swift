@@ -1,15 +1,6 @@
 import SwiftUI
 internal import Combine
 
-/// Entry point for an app's analytics, replacing the old single `AnalyticsView`.
-///
-/// The three tabs follow the user lifecycle rather than the shape of Apple's
-/// API: Impressions (first contact), Retention (inside the app), Reviews (after
-/// using it). Downloads live inside Impressions because they're the same
-/// funnel; deletions live inside Retention because churn is retention inverted.
-///
-/// All three share one `AnalyticsSession`, so the per-app handshake with App
-/// Store Connect happens once no matter how often the user switches tabs.
 struct AnalyticsRootView: View {
     let app: AppResource
     let account: APIAccount
@@ -29,9 +20,6 @@ struct AnalyticsRootView: View {
     var body: some View {
         Group {
             if account.isUsable {
-                // MainLayout is applied inside each page rather than around the
-                // TabView: the TabView paints its own opaque background over
-                // anything behind it, so decoration placed out here is hidden.
                 TabView(selection: $selection) {
                     ImpressionsPageView(session: session)
                         .tabItem { Label("Impressions", systemImage: "eye") }

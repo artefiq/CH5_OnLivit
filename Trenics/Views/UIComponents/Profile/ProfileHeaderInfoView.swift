@@ -16,6 +16,7 @@ struct ProfileHeaderInfoView: View {
     var body: some View {
         HStack() {
             Text(initials)
+                .textCase(.uppercase)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.white)

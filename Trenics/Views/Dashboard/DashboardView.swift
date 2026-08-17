@@ -12,17 +12,17 @@ class DashboardViewModel: ObservableObject {
     @Published var userName: String = "Onlivit"
     @Published var userInitials: String = "ON"
     @Published var selectedAppName: String = ""
-
+    
     @Published var metrics: [MetricModel] = [
         MetricModel(title: "Rating", value: "4.4", isPositive: true, description: "Your rating climbed to 4.4 from 4.1, people are liking what they see.", accentColor: Color("primaryPurple"), valueColor: .green),
         MetricModel(title: "Downloads", value: "-8%", isPositive: false, description: "Down compared to previous weeks, your efforts are worthwhile.", accentColor: .orange, valueColor: .red)
     ]
-
+    
     /// Populated from the selected App Store Connect account rather than hardcoded.
     @Published var apps: [AppItemModel] = []
     @Published var isLoadingApps = false
     @Published var appsErrorMessage: String?
-
+    
     func loadApps(using store: AccountsStore) async {
         guard let account = store.selectedAccount else {
             apps = []
@@ -52,9 +52,9 @@ struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     // Reads the same Keychain/UserDefaults state as the other screens, so the
     // account picked on the Accounts screen is the one used here.
-    @StateObject private var accountsStore = AccountsStore()
+    @ObservedObject var accountsStore: AccountsStore
     @State private var isDropdownOpen: Bool = false
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -62,19 +62,21 @@ struct DashboardView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 16) {
                             
-                            HeaderView(userName: viewModel.userName, initials: viewModel.userInitials)
+                            HeaderView(
+                                userName: accountsStore.selectedAccount?.label ?? "No Account",
+                                initials: String(accountsStore.selectedAccount?.label.prefix(2) ?? "?"),
+                                accountsStore: accountsStore
+                            )
                             
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isDropdownOpen.toggle()
                                 }
                             }) {
-                                // Placeholder keeps the pill from collapsing to
-                                // just its icon before any app has loaded.
                                 AppDropdownView(
                                     selectedApp: viewModel.selectedAppName.isEmpty
-                                        ? "Select an app"
-                                        : viewModel.selectedAppName
+                                    ? "Select an app"
+                                    : viewModel.selectedAppName
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -113,7 +115,7 @@ struct DashboardView: View {
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
-
+                                
                                 if viewModel.isLoadingApps && viewModel.apps.isEmpty {
                                     ProgressView()
                                         .frame(maxWidth: .infinity)
@@ -127,12 +129,12 @@ struct DashboardView: View {
                                     Text(accountsStore.selectedAccount == nil
                                          ? "No account selected yet. Add one from your profile to see your apps here."
                                          : "No apps found for this account.")
-                                        .font(.footnote)
-                                        .foregroundColor(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
-
+                            
                             Text("This list updates automatically from your connected account. Tap the arrow to open full detail.")
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
@@ -176,8 +178,8 @@ struct DashboardView: View {
 
 struct DashboardView_Previews: PreviewProvider {
     static var previews: some View {
-        DashboardView()
-            .previewDisplayName("Dashboard")
+//        DashboardView()
+//            .previewDisplayName("Dashboard")
         
         NavigationStack {
             AllAppsListView(apps: [

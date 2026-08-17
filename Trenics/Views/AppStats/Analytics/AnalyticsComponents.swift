@@ -3,7 +3,6 @@ import SwiftUI
 // MARK: - Formatting
 
 extension Double {
-    /// 1_234 → "1.2K", 3_400_000 → "3.4M"
     var compactFormatted: String {
         let value = abs(self)
         switch value {
@@ -25,7 +24,6 @@ extension Double {
 
 // MARK: - Containers
 
-/// The standard card chrome used by every section on every page.
 struct SectionCard<Content: View>: View {
     let title: String
     var subtitle: String?
@@ -59,7 +57,6 @@ struct StatCard: View {
     let value: String
     var delta: MetricDelta?
     var caption: String?
-    /// Fixed so a row of cards in a horizontal scroller stays aligned.
     var width: CGFloat? = 150
 
     var body: some View {
@@ -98,8 +95,6 @@ struct StatCard: View {
     }
 }
 
-/// Horizontally scrolling row of `StatCard`s that bleeds to the screen edges
-/// while the surrounding page keeps its 20pt gutter.
 struct StatCardRow<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -116,8 +111,6 @@ struct StatCardRow<Content: View>: View {
 
 // MARK: - AI cards
 
-/// "What happened." Deliberately distinct from `AISuggestionCard` — conflating
-/// description with prescription makes the whole thing read as overconfident.
 struct AISummaryCard: View {
     let summary: InsightSummary?
     let range: AnalyticsTimeRange
@@ -173,7 +166,6 @@ struct AISummaryCard: View {
     }
 }
 
-/// "What to do." Different icon and colour on purpose.
 struct AISuggestionCard: View {
     let suggestion: InsightSuggestion?
     var isLoading: Bool = false
@@ -226,7 +218,6 @@ struct AISuggestionCard: View {
     }
 }
 
-/// Matches how Apple's own apps disclose on-device generation.
 struct OnDeviceBadge: View {
     var body: some View {
         Label("Generated on-device", systemImage: "iphone.gen3")
@@ -595,7 +586,6 @@ struct ThemeTagsView: View {
     }
 }
 
-/// Wraps tag chips onto as many lines as they need.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
@@ -639,7 +629,6 @@ struct FlowLayout: Layout {
 
 struct ReviewCard: View {
     let review: CustomerReview
-    /// The developer's reply body, or nil when there isn't one.
     let response: String?
     let isLoadingResponse: Bool
 
@@ -719,7 +708,6 @@ struct ReviewCard: View {
 
 // MARK: - Raw data
 
-/// The underlying TSV, kept available for anything the curated sections don't cover.
 struct DataTableView: View {
     let table: ReportTable
     var rowLimit: Int = 100
