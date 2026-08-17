@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AppDetailView: View {
     let app: AppResource
-    @ObservedObject var credentials: CredentialsStore
+    let account: APIAccount
     @State private var selectedTab = 0
 
     var body: some View {
@@ -15,9 +15,9 @@ struct AppDetailView: View {
             .padding()
 
             if selectedTab == 0 {
-                ReviewsView(app: app, credentials: credentials)
+                ReviewsView(app: app, account: account)
             } else {
-                AnalyticsView(app: app, credentials: credentials)
+                AnalyticsView(app: app, account: account)
             }
         }
         .navigationTitle(app.attributes.name)

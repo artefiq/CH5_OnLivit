@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ReviewsView: View {
     let app: AppResource
-    @ObservedObject var credentials: CredentialsStore
+    let account: APIAccount
     @State private var reviews: [CustomerReview] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -19,7 +19,7 @@ struct ReviewsView: View {
                 Text("Ratings & Reviews — \(app.attributes.name)").font(.title2.bold())
                 Spacer()
                 Button(isLoading ? "Loading..." : "Fetch Reviews") { Task { await fetchReviews() } }
-                    .disabled(isLoading || !credentials.isComplete)
+                    .disabled(isLoading)
             }
 
             if !reviews.isEmpty {
@@ -74,7 +74,8 @@ struct ReviewsView: View {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            reviews = try await credentials.makeClient().fetchAllReviews(appId: app.id)
+            let client = AppStoreConnectClient(issuerId: account.issuerId, keyId: account.keyId, privateKeyPEM: account.privateKeyPEM)
+            reviews = try await client.fetchAllReviews(appId: app.id)
         } catch {
             errorMessage = error.localizedDescription
         }

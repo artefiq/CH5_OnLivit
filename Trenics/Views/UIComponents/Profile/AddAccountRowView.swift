@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct AddAccountRowView: View {
-    @StateObject private var credentials = AccountsStore()
+    @ObservedObject var accountsStore: AccountsStore
 
     var body: some View {
         NavigationLink {
-            CredentialsView(accountsStore: credentials)
+            CredentialsView(accountsStore: accountsStore)
         } label: {
             HStack(spacing: 16) {
                 ZStack {

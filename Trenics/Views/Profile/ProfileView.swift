@@ -78,7 +78,34 @@ struct ProfileView: View {
                         }
                     }
 
-                    AddAccountRowView()
+                    AddAccountRowView(accountsStore: accountsStore)
+                    
+                    NavigationLink {
+                        AppsListView(accountsStore: accountsStore)
+                    } label: {
+                        HStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.secondary.opacity(0.2))
+                                    .frame(width: 40, height: 40)
+
+                                Image(systemName: "text.justify")
+                                    .foregroundColor(.blue)
+                                    .font(.body)
+                                    .bold()
+                            }
+
+                            Text("Apps list")
+                                .font(.body)
+                                .foregroundColor(.blue)
+                                .bold()
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
 
                 } header: {
                     VStack(alignment: .leading, spacing: 16) {

@@ -10,6 +10,7 @@ import SwiftUI
 struct HeaderView: View {
     let userName: String
     let initials: String
+    @StateObject private var accountsStore = AccountsStore()
     
     var body: some View {
         HStack(spacing: 16) {
@@ -20,7 +21,7 @@ struct HeaderView: View {
             Spacer()
             
             NavigationLink {
-                ProfileView(accountsStore: AccountsStore())
+                ProfileView(accountsStore: accountsStore)
             } label: {
                 Text(initials)
                     .font(.title2)
