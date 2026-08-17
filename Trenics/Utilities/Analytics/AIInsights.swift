@@ -286,6 +286,13 @@ nonisolated enum InsightInstructions {
     which themes drive which ratings, and over what period.
     """
 
+    static let accountOverview = """
+    You summarise an app portfolio for its developer, for a dashboard card they \
+    glance at. Two short sentences, plain language, no jargon. Say which app \
+    stands out and why. Reference only the figures supplied, and never invent a \
+    number. Describe the state of things — do not recommend actions.
+    """
+
     static let reviewsSuggestion = """
     You advise app developers on responding to review feedback. Recommend one \
     concrete change to the app, its paywall copy, or its store listing.

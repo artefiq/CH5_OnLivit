@@ -22,12 +22,21 @@ class DashboardViewModel: ObservableObject {
     @Published var apps: [AppItemModel] = []
     @Published var isLoadingApps = false
     @Published var appsErrorMessage: String?
-    
+
+    // MARK: Account overview
+    @Published var summary = AccountSummary()
+    @Published var isLoadingSummary = false
+    @Published var summaryInsight: InsightSummary?
+    @Published var isGeneratingSummaryInsight = false
+    @Published var insightUnavailableMessage: String?
+
     func loadApps(using store: AccountsStore) async {
         guard let account = store.selectedAccount else {
             apps = []
             selectedAppName = ""
             appsErrorMessage = nil
+            summary = AccountSummary()
+            summaryInsight = nil
             return
         }
         isLoadingApps = true
@@ -40,11 +49,50 @@ class DashboardViewModel: ObservableObject {
             if !apps.contains(where: { $0.name == selectedAppName }) {
                 selectedAppName = apps.first?.name ?? ""
             }
+            // The overview needs the app list first, so it follows rather than
+            // running alongside.
+            await loadSummary(account: account, apps: fetched)
         } catch {
             appsErrorMessage = error.localizedDescription
             apps = []
             selectedAppName = ""
+            summary = AccountSummary()
+            summaryInsight = nil
         }
+    }
+
+    private func loadSummary(account: APIAccount, apps: [AppResource], forceRefresh: Bool = false) async {
+        isLoadingSummary = true
+        defer { isLoadingSummary = false }
+        summary = await AccountSummaryLoader.load(
+            account: account,
+            apps: apps,
+            forceRefresh: forceRefresh
+        )
+        await generateSummaryInsight(accountLabel: account.label)
+    }
+
+    private func generateSummaryInsight(accountLabel: String) async {
+        guard summary.hasData else {
+            summaryInsight = nil
+            return
+        }
+        let availability = await InsightGenerator.shared.availability
+        guard availability.isAvailable else {
+            insightUnavailableMessage = availability.message
+            summaryInsight = nil
+            return
+        }
+        insightUnavailableMessage = nil
+        isGeneratingSummaryInsight = true
+        defer { isGeneratingSummaryInsight = false }
+        summaryInsight = await InsightGenerator.shared.summary(
+            instructions: InsightInstructions.accountOverview,
+            facts: summary.factSheet(
+                accountLabel: accountLabel,
+                periodDays: AccountSummaryLoader.periodDays
+            )
+        )
     }
 }
 
@@ -68,6 +116,15 @@ struct DashboardView: View {
                                 accountsStore: accountsStore
                             )
                             
+                            AccountOverviewCard(
+                                summary: viewModel.summary,
+                                insight: viewModel.summaryInsight,
+                                isLoading: viewModel.isLoadingSummary || viewModel.isLoadingApps,
+                                isGeneratingInsight: viewModel.isGeneratingSummaryInsight,
+                                insightUnavailableMessage: viewModel.insightUnavailableMessage,
+                                hasAccount: accountsStore.selectedAccount != nil
+                            )
+
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isDropdownOpen.toggle()
