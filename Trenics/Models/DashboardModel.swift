@@ -19,8 +19,28 @@ struct MetricModel: Identifiable {
 }
 
 struct AppItemModel: Identifiable {
-    let id = UUID()
+    /// The App Store Connect app id for real apps, so rows keep a stable
+    /// identity across refreshes. Falls back to a generated id for samples
+    /// and previews.
+    let id: String
     let name: String
     let description: String
     let iconName: String
+
+    init(id: String = UUID().uuidString, name: String, description: String, iconName: String) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.iconName = iconName
+    }
+
+    /// Maps an app fetched from App Store Connect onto the dashboard's row model.
+    /// The API exposes no description field, so the bundle id (or SKU) stands in
+    /// as the secondary line.
+    init(app: AppResource) {
+        self.id = app.id
+        self.name = app.attributes.name
+        self.description = app.attributes.bundleId ?? app.attributes.sku ?? ""
+        self.iconName = "circle.hexagongrid.fill"
+    }
 }
