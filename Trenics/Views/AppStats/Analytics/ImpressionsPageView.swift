@@ -158,8 +158,8 @@ final class ImpressionsPageModel: ObservableObject {
     @Published private(set) var isGeneratingInsights = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var warnings: [String] = []
-    @Published private(set) var summary: InsightSummary?
-    @Published private(set) var suggestion: InsightSuggestion?
+    @Published private(set) var findings: [InsightFinding] = []
+    @Published private(set) var actions: [InsightAction] = []
     @Published private(set) var insightUnavailableMessage: String?
     @Published var range: AnalyticsTimeRange = .month
 
@@ -244,15 +244,15 @@ final class ImpressionsPageModel: ObservableObject {
 
     private func generateInsights() async {
         guard metrics.hasData else {
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         let availability = await InsightGenerator.shared.availability
         guard availability.isAvailable else {
             insightUnavailableMessage = availability.message
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         insightUnavailableMessage = nil
@@ -261,15 +261,15 @@ final class ImpressionsPageModel: ObservableObject {
 
         let facts = metrics.factSheet(appName: session.app.attributes.name, range: range)
         
-        async let generatedSummary = InsightGenerator.shared.summary(
+        async let generatedFindings = InsightGenerator.shared.findings(
             instructions: InsightInstructions.discoverySummary, facts: facts
         )
-        async let generatedSuggestion = InsightGenerator.shared.suggestion(
+        async let generatedActions = InsightGenerator.shared.actions(
             instructions: InsightInstructions.discoverySuggestion, facts: facts
         )
-        let (newSummary, newSuggestion) = await (generatedSummary, generatedSuggestion)
-        summary = newSummary
-        suggestion = newSuggestion
+        let (newFindings, newActions) = await (generatedFindings, generatedActions)
+        findings = newFindings
+        actions = newActions
     }
 
     func rangeChanged() async {
@@ -290,7 +290,7 @@ struct ImpressionsPageView: View {
     var body: some View {
         MainLayout {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 24) {
                     header
 
                     if let errorMessage = model.errorMessage {
@@ -359,21 +359,19 @@ struct ImpressionsPageView: View {
                     caption: "Impression → download"
                 )
             }
-            ExplainerRow(
-                facts: """
-                Impressions: \(Int(metrics.impressions))
-                Downloads: \(Int(metrics.downloads))
-                Conversion from impression to download: \(metrics.conversionRate.percentFormatted)
-                Impressions change vs the previous period: \(metrics.impressionsDelta?.formatted ?? "not available")
-                Downloads change vs the previous period: \(metrics.downloadsDelta?.formatted ?? "not available")
-                """,
-                fallback: """
-                Impressions count how many times your app appeared anywhere on the App Store. \
-                Downloads count how many people actually installed it. Conversion is downloads \
-                divided by impressions — the share of people who went all the way after seeing you.
-                """
-            )
         }
+           
+        AISummaryDisclosure(
+            findings: model.findings,
+            isLoading: model.isGeneratingInsights,
+            unavailableMessage: model.insightUnavailableMessage
+        )
+        AINextStepDisclosure(
+            actions: model.actions,
+            isLoading: model.isGeneratingInsights
+        )
+
+        Divider()
 
         AnalyticsSection(title: "Discovery funnel", subtitle: "Where people drop off between seeing and installing") {
             FunnelView(stages: metrics.funnel)
@@ -392,18 +390,7 @@ struct ImpressionsPageView: View {
                 """
             )
         }
-
-        AISummaryCard(
-            summary: model.summary,
-            range: model.range,
-            isLoading: model.isGeneratingInsights,
-            unavailableMessage: model.insightUnavailableMessage
-        )
-        AISuggestionCard(
-            suggestion: model.suggestion,
-            isLoading: model.isGeneratingInsights
-        )
-
+        
         if !metrics.impressionSeries.isEmpty || !metrics.downloadSeries.isEmpty {
             AnalyticsSection(title: "Impressions vs downloads", subtitle: "Spikes and dips lined up on one timeline") {
                 DiscoveryTrendChart(

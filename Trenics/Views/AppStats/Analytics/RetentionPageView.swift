@@ -159,8 +159,8 @@ final class RetentionPageModel: ObservableObject {
     @Published private(set) var isGeneratingInsights = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var warnings: [String] = []
-    @Published private(set) var summary: InsightSummary?
-    @Published private(set) var suggestion: InsightSuggestion?
+    @Published private(set) var findings: [InsightFinding] = []
+    @Published private(set) var actions: [InsightAction] = []
     @Published private(set) var insightUnavailableMessage: String?
     @Published var range: AnalyticsTimeRange = .month
 
@@ -260,15 +260,15 @@ final class RetentionPageModel: ObservableObject {
 
     private func generateInsights() async {
         guard metrics.hasData else {
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         let availability = await InsightGenerator.shared.availability
         guard availability.isAvailable else {
             insightUnavailableMessage = availability.message
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         insightUnavailableMessage = nil
@@ -276,15 +276,15 @@ final class RetentionPageModel: ObservableObject {
         defer { isGeneratingInsights = false }
 
         let facts = metrics.factSheet(appName: session.app.attributes.name, range: range)
-        async let generatedSummary = InsightGenerator.shared.summary(
+        async let generatedFindings = InsightGenerator.shared.findings(
             instructions: InsightInstructions.retentionSummary, facts: facts
         )
-        async let generatedSuggestion = InsightGenerator.shared.suggestion(
+        async let generatedActions = InsightGenerator.shared.actions(
             instructions: InsightInstructions.retentionSuggestion, facts: facts
         )
-        let (newSummary, newSuggestion) = await (generatedSummary, generatedSuggestion)
-        summary = newSummary
-        suggestion = newSuggestion
+        let (newFindings, newActions) = await (generatedFindings, generatedActions)
+        findings = newFindings
+        actions = newActions
     }
 }
 
@@ -422,16 +422,17 @@ struct RetentionPageView: View {
             )
         }
 
-        AISummaryCard(
-            summary: model.summary,
-            range: model.range,
+        AISummaryDisclosure(
+            findings: model.findings,
             isLoading: model.isGeneratingInsights,
             unavailableMessage: model.insightUnavailableMessage
         )
-        AISuggestionCard(
-            suggestion: model.suggestion,
+        AINextStepDisclosure(
+            actions: model.actions,
             isLoading: model.isGeneratingInsights
         )
+
+        Divider()
 
         if !metrics.sessionSeries.isEmpty || !metrics.deletionSeries.isEmpty {
             AnalyticsSection(

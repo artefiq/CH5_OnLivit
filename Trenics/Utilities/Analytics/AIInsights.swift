@@ -24,6 +24,22 @@ nonisolated struct ReviewThemeInsight: Identifiable, Sendable, Equatable {
     let representativeQuote: String
 }
 
+/// One thing the numbers show: a heading, the observations behind it, and the
+/// same point restated in everyday language.
+nonisolated struct InsightFinding: Identifiable, Sendable, Equatable {
+    var id: String { title }
+    let title: String
+    let points: [String]
+    let plainMeaning: String
+}
+
+/// One recommended action, with the reasoning that leads to it.
+nonisolated struct InsightAction: Identifiable, Sendable, Equatable {
+    var id: String { title }
+    let title: String
+    let detail: String
+}
+
 nonisolated enum InsightAvailability: Sendable, Equatable {
     case available
     case unavailable(String)
@@ -61,6 +77,39 @@ nonisolated struct InsightSuggestionOutput {
 
     @Guide(description: "How well the data supports this action. Exactly one of: High, Medium, Low.")
     var confidence: String
+}
+
+@Generable
+nonisolated struct InsightFindingOutput {
+    @Guide(description: "A short heading naming what is happening, under ten words. Do not number it.")
+    var title: String
+
+    @Guide(description: "One or two short factual observations. Each is a complete sentence citing a figure that was supplied. Never invent a number.")
+    var points: [String]
+
+    @Guide(description: "The same finding restated in everyday language for someone who does not read analytics. One sentence, no numbers.")
+    var plainMeaning: String
+}
+
+@Generable
+nonisolated struct InsightFindingsOutput {
+    @Guide(description: "Two findings, the most important first.")
+    var findings: [InsightFindingOutput]
+}
+
+@Generable
+nonisolated struct InsightActionOutput {
+    @Guide(description: "The action as a short imperative heading, for example 'Refresh your screenshots and keywords'. Under ten words.")
+    var title: String
+
+    @Guide(description: "One or two sentences saying why this action follows from the figures supplied.")
+    var detail: String
+}
+
+@Generable
+nonisolated struct InsightActionsOutput {
+    @Guide(description: "Two actions, the most valuable first.")
+    var actions: [InsightActionOutput]
 }
 
 @Generable
@@ -154,6 +203,54 @@ actor InsightGenerator {
         }
         #else
         return nil
+        #endif
+    }
+
+    // MARK: Structured findings & actions
+
+    /// The analytics pages render these as numbered, expandable lists, so the
+    /// model is asked for structure rather than prose.
+    func findings(instructions: String, facts: String) async -> [InsightFinding] {
+        #if canImport(FoundationModels)
+        guard availability.isAvailable else { return [] }
+        do {
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(
+                to: Self.summaryPrompt(facts: facts),
+                generating: InsightFindingsOutput.self
+            )
+            return response.content.findings.map {
+                InsightFinding(
+                    title: $0.title,
+                    points: $0.points,
+                    plainMeaning: $0.plainMeaning
+                )
+            }
+        } catch {
+            return []
+        }
+        #else
+        return []
+        #endif
+    }
+
+    func actions(instructions: String, facts: String) async -> [InsightAction] {
+        #if canImport(FoundationModels)
+        guard availability.isAvailable else { return [] }
+        do {
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(
+                to: Self.suggestionPrompt(facts: facts),
+                generating: InsightActionsOutput.self
+            )
+            return response.content.actions.map {
+                InsightAction(title: $0.title, detail: $0.detail)
+            }
+        } catch {
+            return []
+        }
+        #else
+        return []
         #endif
     }
 
@@ -286,30 +383,39 @@ actor InsightGenerator {
 
 nonisolated enum InsightInstructions {
     static let discoverySummary = """
-    You analyse App Store discovery funnels for an app developer. Be specific and \
-    quantitative. Reference only the figures supplied. Two or three sentences total, \
-    plain language, no marketing tone.
+    You analyse App Store discovery funnels for an app developer. Each finding \
+    names one thing the numbers show, backs it with observations drawn only from \
+    the figures supplied, and then restates it without jargon. Describe what \
+    happened — a separate card handles what to do.
     """
 
     static let discoverySuggestion = """
-    You advise app developers on App Store product page optimisation. Recommend one \
-    concrete, testable action grounded in the supplied conversion figures.
+    You advise app developers on App Store product page optimisation. Each action \
+    is concrete and testable, and follows from the conversion figures supplied. \
+    Do not restate the numbers as a summary.
     """
 
     static let retentionSummary = """
     You analyse mobile app retention for an app developer. Look for correlations \
-    across the supplied metrics — a retention drop next to a crash spike or a version \
-    release matters more than either alone. State the correlation if one exists.
+    across the supplied metrics — a retention drop next to a crash spike or a \
+    version release matters more than either alone — and make the correlation the \
+    finding when one exists. Describe what happened, not what to do.
     """
 
     static let retentionSuggestion = """
-    You advise app developers on retention and churn. Recommend one concrete \
-    investigation or intervention grounded in the supplied figures.
+    You advise app developers on retention and churn. Each action is a concrete \
+    investigation or intervention grounded in the figures supplied.
     """
 
     static let reviewsSummary = """
     You analyse App Store review sentiment for an app developer. Be specific about \
-    which themes drive which ratings, and over what period.
+    which themes drive which ratings, and over what period. Describe what the \
+    reviews show, not what to do about them.
+    """
+
+    static let reviewsSuggestion = """
+    You advise app developers on responding to review feedback. Each action is a \
+    concrete change to the app, its paywall copy, or its store listing.
     """
 
     static let accountOverview = """
@@ -326,8 +432,4 @@ nonisolated enum InsightInstructions {
     one. No headings, no bullet points, no preamble — just the explanation.
     """
 
-    static let reviewsSuggestion = """
-    You advise app developers on responding to review feedback. Recommend one \
-    concrete change to the app, its paywall copy, or its store listing.
-    """
 }
