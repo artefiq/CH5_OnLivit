@@ -341,26 +341,56 @@ struct ImpressionsPageView: View {
     private var content: some View {
         let metrics = model.metrics
 
-        StatCardRow {
-            StatCard(
-                title: "Impressions",
-                value: metrics.impressions.compactFormatted,
-                delta: metrics.impressionsDelta
-            )
-            StatCard(
-                title: "Downloads",
-                value: metrics.downloads.compactFormatted,
-                delta: metrics.downloadsDelta
-            )
-            StatCard(
-                title: "Conversion",
-                value: metrics.conversionRate.percentFormatted,
-                caption: "Impression → download"
+        AnalyticsSection(title: "Headline numbers", subtitle: "The period at a glance") {
+            StatCardRow {
+                StatCard(
+                    title: "Impressions",
+                    value: metrics.impressions.compactFormatted,
+                    delta: metrics.impressionsDelta
+                )
+                StatCard(
+                    title: "Downloads",
+                    value: metrics.downloads.compactFormatted,
+                    delta: metrics.downloadsDelta
+                )
+                StatCard(
+                    title: "Conversion",
+                    value: metrics.conversionRate.percentFormatted,
+                    caption: "Impression → download"
+                )
+            }
+            ExplainerRow(
+                facts: """
+                Impressions: \(Int(metrics.impressions))
+                Downloads: \(Int(metrics.downloads))
+                Conversion from impression to download: \(metrics.conversionRate.percentFormatted)
+                Impressions change vs the previous period: \(metrics.impressionsDelta?.formatted ?? "not available")
+                Downloads change vs the previous period: \(metrics.downloadsDelta?.formatted ?? "not available")
+                """,
+                fallback: """
+                Impressions count how many times your app appeared anywhere on the App Store. \
+                Downloads count how many people actually installed it. Conversion is downloads \
+                divided by impressions — the share of people who went all the way after seeing you.
+                """
             )
         }
 
-        SectionCard(title: "Discovery funnel", subtitle: "Where people drop off between seeing and installing") {
+        AnalyticsSection(title: "Discovery funnel", subtitle: "Where people drop off between seeing and installing") {
             FunnelView(stages: metrics.funnel)
+            ExplainerRow(
+                facts: """
+                Impressions: \(Int(metrics.impressions))
+                Product page views: \(Int(metrics.pageViews))
+                Downloads: \(Int(metrics.downloads))
+                Impression to download conversion: \(metrics.conversionRate.percentFormatted)
+                Product page view to download conversion: \(metrics.pageConversionRate.percentFormatted)
+                """,
+                fallback: """
+                The funnel follows one journey: your app is seen, someone opens the product page, \
+                and then installs. The percentage between each bar is how many people carried on to \
+                the next step. A steep drop tells you which step is losing people.
+                """
+            )
         }
 
         AISummaryCard(
@@ -375,34 +405,111 @@ struct ImpressionsPageView: View {
         )
 
         if !metrics.impressionSeries.isEmpty || !metrics.downloadSeries.isEmpty {
-            SectionCard(title: "Impressions vs downloads", subtitle: "Spikes and dips lined up on one timeline") {
+            AnalyticsSection(title: "Impressions vs downloads", subtitle: "Spikes and dips lined up on one timeline") {
                 DiscoveryTrendChart(
                     impressions: metrics.impressionSeries,
                     downloads: metrics.downloadSeries
+                )
+                ExplainerRow(
+                    facts: """
+                    Impressions per day: \(Self.describeSeries(metrics.impressionSeries))
+                    Downloads per day: \(Self.describeSeries(metrics.downloadSeries))
+                    """,
+                    fallback: """
+                    Both lines share one timeline so you can see whether downloads follow \
+                    impressions. When impressions rise and downloads stay flat, more people are \
+                    seeing your app without being convinced by it.
+                    """
                 )
             }
         }
 
         if !metrics.sourceBreakdown.isEmpty {
-            SectionCard(title: "By source", subtitle: "Search, Browse, Referrer, Apple Ads") {
+            AnalyticsSection(title: "By source", subtitle: "Search, Browse, Referrer, Apple Ads") {
                 BreakdownListView(items: metrics.sourceBreakdown)
+                ExplainerRow(
+                    facts: "Impressions by source: \(Self.describeBreakdown(metrics.sourceBreakdown))",
+                    fallback: """
+                    Where people were when they saw your app. Search means they typed something, \
+                    Browse means the App Store surfaced you, and Referrer means another app or site \
+                    sent them. Search-heavy traffic usually rewards keywords; browse-heavy traffic \
+                    rewards your icon and screenshots.
+                    """
+                )
             }
         }
         if !metrics.territoryBreakdown.isEmpty {
-            SectionCard(title: "Top territories") {
+            AnalyticsSection(title: "Top territories") {
                 BreakdownListView(items: metrics.territoryBreakdown)
+                ExplainerRow(
+                    facts: "Impressions by territory: \(Self.describeBreakdown(metrics.territoryBreakdown))",
+                    fallback: """
+                    The countries your app is being seen in most. A country high here but low on \
+                    downloads is often a localisation gap rather than a lack of interest.
+                    """
+                )
             }
         }
         if !metrics.deviceBreakdown.isEmpty {
-            SectionCard(title: "By device") {
+            AnalyticsSection(title: "By device") {
                 BreakdownListView(items: metrics.deviceBreakdown)
+                ExplainerRow(
+                    facts: "Impressions by device: \(Self.describeBreakdown(metrics.deviceBreakdown))",
+                    fallback: """
+                    Which devices your audience is on. It tells you which screen sizes your \
+                    screenshots and layout most need to look right on.
+                    """
+                )
             }
         }
         if !metrics.downloadTypeBreakdown.isEmpty {
-            SectionCard(title: "Download type", subtitle: "First-time installs versus redownloads") {
+            AnalyticsSection(
+                title: "Download type",
+                subtitle: "First-time installs versus redownloads",
+                showsDivider: false
+            ) {
                 BreakdownListView(items: metrics.downloadTypeBreakdown)
+                ExplainerRow(
+                    facts: "Downloads by type: \(Self.describeBreakdown(metrics.downloadTypeBreakdown))",
+                    fallback: """
+                    First-time downloads are new people. Redownloads are people who had your app \
+                    before and came back. Growth comes from the first number; the second is a sign \
+                    of how well you are remembered.
+                    """
+                )
             }
         }
+    }
+
+    // MARK: Fact sheets for the explainers
+
+    /// Series are summarised rather than listed — a 90-day series would swamp
+    /// the model's context and it only needs the shape.
+    private static func describeSeries(_ series: [TrendPoint]) -> String {
+        guard !series.isEmpty else { return "no data" }
+        let total = series.reduce(0) { $0 + $1.value }
+        let peak = series.max { $0.value < $1.value }
+        let first = series.first?.value ?? 0
+        let last = series.last?.value ?? 0
+        var parts = [
+            "\(series.count) days",
+            "total \(Int(total))",
+            "average \(Int(total / Double(series.count)))",
+            "first day \(Int(first))",
+            "last day \(Int(last))"
+        ]
+        if let peak {
+            parts.append("peak \(Int(peak.value))")
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private static func describeBreakdown(_ items: [BreakdownItem]) -> String {
+        guard !items.isEmpty else { return "no data" }
+        let total = items.reduce(0) { $0 + $1.value }
+        return items
+            .map { "\($0.label) \(Int($0.value)) (\($0.share(of: total).percentFormatted))" }
+            .joined(separator: ", ")
     }
 }
 

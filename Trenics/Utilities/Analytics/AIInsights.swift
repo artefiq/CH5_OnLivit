@@ -157,6 +157,32 @@ actor InsightGenerator {
         #endif
     }
 
+    // MARK: Per-stat explanation
+
+    /// Plain-language explanation of one specific figure, for the
+    /// "What does it mean?" rows. Returns free text rather than a @Generable
+    /// struct because the caller renders it as a single paragraph.
+    func explanation(instructions: String, facts: String) async -> String? {
+        #if canImport(FoundationModels)
+        guard availability.isAvailable else { return nil }
+        do {
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(
+                to: """
+                Explain what these figures mean for the developer:
+
+                \(facts)
+                """
+            )
+            return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+
     // MARK: Review themes
 
     func reviewThemes(from reviews: [CustomerReview]) async -> [ReviewThemeInsight] {
@@ -291,6 +317,13 @@ nonisolated enum InsightInstructions {
     glance at. Two short sentences, plain language, no jargon. Say which app \
     stands out and why. Reference only the figures supplied, and never invent a \
     number. Describe the state of things — do not recommend actions.
+    """
+
+    static let statExplainer = """
+    You explain App Store analytics to an app developer who is not an analyst. \
+    Two or three short sentences. Say what the number means and whether it is \
+    good or bad, in plain words. Use only the figures given and never invent \
+    one. No headings, no bullet points, no preamble — just the explanation.
     """
 
     static let reviewsSuggestion = """

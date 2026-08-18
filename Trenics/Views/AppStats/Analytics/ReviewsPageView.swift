@@ -305,7 +305,7 @@ struct ReviewsPageView: View {
     }
 
     private var ratingHero: some View {
-        SectionCard(title: "Ratings") {
+        AnalyticsSection(title: "Ratings") {
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 4) {
                     Text(String(format: "%.2f", model.metrics.average))
@@ -327,12 +327,36 @@ struct ReviewsPageView: View {
 
                 RatingHistogramView(buckets: model.metrics.histogram)
             }
+            ExplainerRow(
+                facts: """
+                Average review score: \(String(format: "%.2f", model.metrics.average)) out of 5
+                Total reviews in this period: \(model.metrics.total)
+                Star breakdown: \(model.metrics.histogram.map { "\($0.stars) star: \($0.count)" }.joined(separator: ", "))
+                Change vs the previous period: \(model.metrics.averageDelta?.formatted ?? "not available")
+                """,
+                fallback: """
+                The big number is the average of the written reviews in this period, and the bars \
+                show how many landed on each star. A healthy app is usually top-heavy; a bulge at \
+                one star means a specific complaint rather than general dissatisfaction.
+                """
+            )
         }
     }
 
     private var sentimentSection: some View {
-        SectionCard(title: "Sentiment", subtitle: "Tap a slice legend to filter the list below") {
+        AnalyticsSection(title: "Sentiment", subtitle: "Tap a filter below to narrow the list") {
             SentimentDonutView(counts: model.metrics.sentimentCounts)
+            ExplainerRow(
+                facts: ReviewSentiment.allCases
+                    .map { "\($0.label): \(model.metrics.sentimentCounts[$0] ?? 0) reviews" }
+                    .joined(separator: ", "),
+                fallback: """
+                Reviews grouped by tone: four and five stars count as positive, three as neutral, \
+                and one or two as negative. The split matters more than the average — a mix of \
+                fives and ones averages the same as a pile of threes but means something very \
+                different.
+                """
+            )
         }
     }
 
@@ -340,11 +364,31 @@ struct ReviewsPageView: View {
     private var trendSection: some View {
         let trend = model.trend
         if trend.count > 1 {
-            SectionCard(
+            AnalyticsSection(
                 title: "Rating over time",
                 subtitle: "A rating dip alongside a volume spike usually means a release regression"
             ) {
                 ReviewTrendChart(points: trend)
+                ExplainerRow(
+                    facts: {
+                        let averages = trend.map(\.average)
+                        let counts = trend.map(\.count)
+                        let mean = averages.reduce(0, +) / Double(averages.count)
+                        return """
+                        Days covered: \(trend.count)
+                        Average rating across those days: \(String(format: "%.2f", mean))
+                        First day average: \(String(format: "%.2f", averages.first ?? 0))
+                        Last day average: \(String(format: "%.2f", averages.last ?? 0))
+                        Lowest day average: \(String(format: "%.2f", averages.min() ?? 0))
+                        Total reviews: \(counts.reduce(0, +)), busiest day \(counts.max() ?? 0)
+                        """
+                    }(),
+                    fallback: """
+                    The line is your average rating per day and the bars are how many reviews \
+                    arrived. A dip in the line at the same time as a jump in the bars usually means \
+                    a release upset people, because unhappy users write reviews in bursts.
+                    """
+                )
             }
         }
     }
@@ -352,11 +396,11 @@ struct ReviewsPageView: View {
     @ViewBuilder
     private var themeSection: some View {
         if model.isGeneratingInsights && model.themes.isEmpty {
-            SectionCard(title: "Themes", subtitle: "Extracted on-device from review text") {
+            AnalyticsSection(title: "Themes", subtitle: "Extracted on-device from review text") {
                 ProgressView().controlSize(.small)
             }
         } else if !model.themes.isEmpty {
-            SectionCard(title: "Themes", subtitle: "Extracted on-device — tap to filter") {
+            AnalyticsSection(title: "Themes", subtitle: "Extracted on-device — tap to filter") {
                 VStack(alignment: .leading, spacing: 12) {
                     ThemeTagsView(themes: model.themes, selected: $model.filter.theme)
                     if let selected = model.filter.theme,
@@ -369,6 +413,16 @@ struct ReviewsPageView: View {
                     }
                     OnDeviceBadge()
                 }
+                ExplainerRow(
+                    facts: model.themes
+                        .map { "\($0.theme): \($0.reviewCount) reviews, \($0.sentiment.rawValue)" }
+                        .joined(separator: "\n"),
+                    fallback: """
+                    Topics that came up repeatedly across your review text, with how many reviews \
+                    mentioned each and whether those reviews were positive or negative. A negative \
+                    theme with a high count is the single clearest thing to fix.
+                    """
+                )
             }
         }
     }
