@@ -114,8 +114,14 @@ final class AppStoreConnectClient {
         return try decode(JSONAPIResponse<AnalyticsReportResource>.self, from: data).data
     }
 
-    func fetchInstances(reportId: String, granularity: String = "DAILY") async throws -> [AnalyticsReportInstanceResource] {
-        let data = try await request("\(baseURL)/analyticsReports/\(reportId)/instances?filter[granularity]=\(granularity)&limit=30")
+    func fetchInstances(
+        reportId: String,
+        granularity: ReportGranularity = .daily,
+        limit: Int = 30
+    ) async throws -> [AnalyticsReportInstanceResource] {
+        let data = try await request(
+            "\(baseURL)/analyticsReports/\(reportId)/instances?filter[granularity]=\(granularity.rawValue)&limit=\(limit)"
+        )
         return try decode(JSONAPIResponse<AnalyticsReportInstanceResource>.self, from: data).data
     }
 

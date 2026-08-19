@@ -9,7 +9,9 @@ import SwiftUI
 
 struct AllAppsListView: View {
     let apps: [AppItemModel]
-    
+    /// Needed so a tapped row can open analytics for the selected account.
+    var account: APIAccount?
+
     @State private var searchText: String = ""
     
     var filteredApps: [AppItemModel] {
@@ -26,7 +28,7 @@ struct AllAppsListView: View {
                 VStack(spacing: 16) {
                     ForEach(filteredApps) { app in
                         NavigationLink {
-                            AppMetricsView(app: app)
+                            AppRowDestination(app: app, account: account)
                         } label: {
                             AppListRowView(app: app)
                         }

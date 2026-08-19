@@ -1,7 +1,7 @@
 import Foundation
 import Compression
 
-enum GzipError: Error, LocalizedError {
+nonisolated enum GzipError: Error, LocalizedError {
     case invalidHeader
     case decompressionFailed
 
@@ -15,7 +15,7 @@ enum GzipError: Error, LocalizedError {
 
 /// Minimal gzip reader: strips the gzip container and inflates the raw DEFLATE
 /// stream using Apple's Compression framework (COMPRESSION_ZLIB decodes raw deflate).
-enum Gzip {
+nonisolated enum Gzip {
     static func decompress(_ data: Data) throws -> Data {
         guard data.count > 18 else { throw GzipError.invalidHeader }
         let bytes = [UInt8](data)

@@ -21,7 +21,7 @@ struct AppsListView: View {
                     .foregroundStyle(.secondary)
                     .padding()
             } else {
-                Picker("Account", selection: $accountsStore.selectedAccountId) {
+                Picker("Account", selection: $accountsStore.selectedAccountId) 
                     ForEach(accountsStore.accounts) { account in
                         Text(account.label).tag(Optional(account.id))
                     }
