@@ -333,6 +333,8 @@ struct RetentionPageView: View {
                 Task { await model.rangeChanged() }
             }
         }
+        .navigationTitle("Retention")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var header: some View {

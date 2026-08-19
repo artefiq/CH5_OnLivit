@@ -270,6 +270,8 @@ struct ReviewsPageView: View {
                 model.rangeChanged()
             }
         }
+        .navigationTitle("Reviews")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var header: some View {

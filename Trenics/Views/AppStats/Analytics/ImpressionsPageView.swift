@@ -290,7 +290,7 @@ struct ImpressionsPageView: View {
     var body: some View {
         MainLayout {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
                     header
 
                     if let errorMessage = model.errorMessage {
@@ -322,6 +322,8 @@ struct ImpressionsPageView: View {
                 Task { await model.rangeChanged() }
             }
         }
+        .navigationTitle("Impressions")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var header: some View {
