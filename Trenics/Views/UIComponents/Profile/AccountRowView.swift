@@ -1,69 +1,44 @@
 //
-//  AccountRow2View.swift
+//  AccountRowView.swift
 //  Trenics
 //
-//  Created by Ida Bagus Putu Ryan Paramasatya Putra on 14/08/26.
+//  Created by Ahmad Taufiq Hidayat on 13/08/26.
 //
 
 import SwiftUI
 
 struct AccountRowView: View {
-    let account: APIAccount
+    let account: AccountModel
     let isSelected: Bool
-
-    private var initials: String {
-        let trimmedLabel = account.label
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let letters = trimmedLabel.prefix(2)
-
-        return String(letters).uppercased()
-    }
-
+    
     var body: some View {
-        HStack(spacing: 12) {
-            Text(initials)
+        HStack(spacing: 8) {
+            Text(account.initials)
                 .font(.subheadline)
                 .fontWeight(.bold)
-                .foregroundStyle(.white)
+                .foregroundColor(.white)
                 .frame(width: 36, height: 36)
-                .background(Color("primaryPurple"))
+                .background(account.avatarColor)
                 .clipShape(Circle())
-
+            
             VStack(alignment: .leading, spacing: 4) {
-                Text(account.label.isEmpty ? "Unnamed Account" : account.label)
+                Text(account.name)
                     .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text(
-                    account.issuerId.isEmpty
-                    ? "No Issuer ID"
-                    : "Issuer: \(account.issuerId)"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                    .foregroundColor(.primary)
+                
+                Text("\(account.appCount) Apps • \(account.syncStatus)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-
+            
             Spacer()
-
-            Image(
-                systemName: isSelected
-                    ? "checkmark.circle.fill"
-                    : "circle"
-            )
-            .foregroundStyle(
-                isSelected
-                    ? Color("primaryPurple")
-                    : .gray.opacity(0.5)
-            )
-            .font(.title2)
+            
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(isSelected ? Color("primaryPurple") : .gray.opacity(0.5))
+                .font(.title2)
         }
+        .padding(0)
+        .listRowBackground(isSelected ? Color.gray.opacity(0.1) : Color("cardBGColor"))
         .contentShape(Rectangle())
-        .listRowBackground(
-            isSelected
-                ? Color.gray.opacity(0.1)
-                : Color("cardBGColor")
-        )
     }
 }

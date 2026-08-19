@@ -9,6 +9,11 @@ struct DatedTable: Sendable, Equatable {
     static let empty = DatedTable(table: .empty, fetchedAt: .distantPast)
 }
 
+/// Cache-first access to a single `ReportMetric`.
+///
+/// On a hit for today's data no network call is made at all. On a miss it walks
+/// Apple's pipeline — report → instances → segments → gzipped TSV — merges the
+/// segments, and writes the result back to disk.
 @MainActor
 final class AnalyticsReportFetcher {
     private let session: AnalyticsSession

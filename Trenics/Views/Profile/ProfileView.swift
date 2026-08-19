@@ -68,7 +68,7 @@ struct ProfileView: View {
                         .listRowBackground(Color("cardBGColor"))
                     } else {
                         ForEach(accountsStore.accounts) { account in
-                            AccountRowView(
+                            AccountRow2View(
                                 account: account,
                                 isSelected: accountsStore.selectedAccountId == account.id
                             )
@@ -79,6 +79,33 @@ struct ProfileView: View {
                     }
 
                     AddAccountRowView(accountsStore: accountsStore)
+                    
+                    NavigationLink {
+                        AppsListView(accountsStore: accountsStore)
+                    } label: {
+                        HStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.secondary.opacity(0.2))
+                                    .frame(width: 40, height: 40)
+
+                                Image(systemName: "text.justify")
+                                    .foregroundColor(.blue)
+                                    .font(.body)
+                                    .bold()
+                            }
+
+                            Text("Apps list")
+                                .font(.body)
+                                .foregroundColor(.blue)
+                                .bold()
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
 
                 } header: {
                     VStack(alignment: .leading, spacing: 16) {
@@ -111,8 +138,8 @@ struct ProfileView: View {
                 Section {
                     PreferenceToggleRowView(
                         title: "Dark Mode",
-                        iconName: isDarkMode ? "sun.max.fill":"moon.stars.fill",
-                        iconColor: isDarkMode ? Color.orange : Color("primaryPurple"),
+                        iconName: !isDarkMode ? "sun.max.fill":"moon.stars.fill",
+                        iconColor: !isDarkMode ? Color.orange : Color("primaryPurple"),
                         isOn: $isDarkMode
                     )
                 } header: {

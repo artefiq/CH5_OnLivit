@@ -82,18 +82,6 @@ final class AppStoreConnectClient {
         return results
     }
 
-    // MARK: App Icons
-
-    /// The newest build's icon asset, or nil when the app has no build with
-    /// artwork — which is normal for an app that has never been uploaded.
-    func fetchAppIcon(appId: String) async throws -> ImageAsset? {
-        let data = try await request(
-            "\(baseURL)/builds?filter[app]=\(appId)&limit=1&sort=-uploadedDate&fields[builds]=iconAssetToken,version,uploadedDate"
-        )
-        let decoded = try decode(JSONAPIResponse<BuildResource>.self, from: data)
-        return decoded.data.first?.attributes?.iconAssetToken
-    }
-
     // MARK: App Analytics
     // Flow per Apple's docs: create/reuse an ONGOING analyticsReportRequest for the app,
     // list the reports it makes available, list instances (dated report runs) for a report,
