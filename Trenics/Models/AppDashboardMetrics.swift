@@ -62,11 +62,27 @@ nonisolated struct AppDashboardMetrics: Codable, Sendable, Equatable, Identifiab
         return score
     }
 
+    var isDeclining: Bool { !decliningMetrics.isEmpty }
+
+    /// Higher is healthier. Only used to choose a subject when nothing is
+    /// declining, so the section always points at an app.
+    var standingScore: Double {
+        var total = 0.0
+        var counted = 0
+        if let retention { total += retention; counted += 1 }
+        if let reviewAverage { total += reviewAverage / 5; counted += 1 }
+        return counted > 0 ? total / Double(counted) : 0
+    }
+
     /// "3 of 3 metrics need attention this week. Impressions, retention, and reviews are down."
     var attentionSummary: String {
         let declining = decliningMetrics
         guard !declining.isEmpty else {
-            return "Nothing is trending down this week."
+            guard comparableCount > 0 else {
+                return "No week-on-week comparison yet, so there is nothing to flag."
+            }
+            let noun = comparableCount == 1 ? "metric is" : "metrics are"
+            return "All \(comparableCount) \(noun) steady or improving this week."
         }
         let list: String
         switch declining.count {
@@ -89,9 +105,15 @@ nonisolated extension String {
 }
 
 nonisolated extension Array where Element == AppDashboardMetrics {
-    /// The app most worth looking at, or nil when nothing is declining.
+    /// The app most worth looking at. Falls back to the weakest performer when
+    /// nothing is declining, so the section always names an app rather than
+    /// collapsing to an empty slot.
     var needingMostAttention: AppDashboardMetrics? {
-        filter { !$0.decliningMetrics.isEmpty }
-            .max { $0.attentionScore < $1.attentionScore }
+        let withData = filter(\.hasAnyValue)
+        guard !withData.isEmpty else { return nil }
+        if let worst = withData.filter(\.isDeclining).max(by: { $0.attentionScore < $1.attentionScore }) {
+            return worst
+        }
+        return withData.min { $0.standingScore < $1.standingScore }
     }
 }

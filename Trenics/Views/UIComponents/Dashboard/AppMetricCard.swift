@@ -9,11 +9,16 @@ struct AppMetricCard: View {
     let app: AppItemModel
     let metrics: AppDashboardMetrics?
     let isLoading: Bool
+    var account: APIAccount?
 
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: 14) {
-                AppIconTile(systemName: app.iconName)
+                AppIconView(
+                    appId: app.id,
+                    account: account,
+                    fallbackSystemName: app.iconName
+                )
                 Text(app.name)
                     .font(.headline)
                     .lineLimit(1)

@@ -154,17 +154,16 @@ struct DashboardView: View {
             } label: {
                 NeedsAttentionCard(
                     metrics: attention,
-                    // The card must show the flagged app's own glyph, not a
-                    // fixed one, or it names one app and pictures another.
+                    account: accountsStore.selectedAccount,
+                    // The flagged app's own glyph, so the card never names one
+                    // app while picturing another.
                     iconName: viewModel.apps.first { $0.id == attention.id }?.iconName
                         ?? "circle.hexagongrid.fill"
                 )
             }
             .buttonStyle(PlainButtonStyle())
-        } else if viewModel.isLoadingMetrics {
+        } else if viewModel.isLoadingMetrics || (!viewModel.apps.isEmpty && viewModel.metricsByApp.isEmpty) {
             NeedsAttentionPlaceholder(message: "Checking which app needs your attention…", isLoading: true)
-        } else if !viewModel.metricsByApp.isEmpty {
-            NeedsAttentionPlaceholder(message: "Nothing is trending down this week. Your apps are holding steady.")
         }
     }
 
@@ -205,7 +204,8 @@ struct DashboardView: View {
                         AppMetricCard(
                             app: app,
                             metrics: viewModel.metrics(for: app),
-                            isLoading: viewModel.isLoadingMetrics && viewModel.metrics(for: app) == nil
+                            isLoading: viewModel.isLoadingMetrics && viewModel.metrics(for: app) == nil,
+                            account: accountsStore.selectedAccount
                         )
                     }
                     .buttonStyle(PlainButtonStyle())

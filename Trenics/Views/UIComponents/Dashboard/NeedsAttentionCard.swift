@@ -4,12 +4,19 @@ import SwiftUI
 /// impressions, retention and reviews.
 struct NeedsAttentionCard: View {
     let metrics: AppDashboardMetrics
-    let iconName: String
+    let account: APIAccount?
+    var iconName: String = "circle.hexagongrid.fill"
+
+    /// The card is always shown, so the label has to say which case this is —
+    /// calling a healthy app "needs your attention" would be a lie.
+    private var eyebrow: String {
+        metrics.isDeclining ? "Needs your attention" : "Holding steady"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Needs your attention")
+                Text(eyebrow)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
                 Spacer()
@@ -19,7 +26,13 @@ struct NeedsAttentionCard: View {
             }
 
             HStack(spacing: 12) {
-                AppIconTile(systemName: iconName, size: 44, tint: .white)
+                AppIconView(
+                    appId: metrics.id,
+                    account: account,
+                    fallbackSystemName: iconName,
+                    size: 44,
+                    tint: .white
+                )
                 Text(metrics.appName)
                     .font(.title3.bold())
                     .foregroundStyle(.white)
@@ -79,25 +92,6 @@ struct NeedsAttentionPlaceholder: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color(hex: 0x39328F).opacity(0.35), radius: 12, y: 6)
-    }
-}
-
-/// Rounded app-icon stand-in. The App Store Connect API doesn't hand out icon
-/// artwork, so this is a glyph rather than the real icon.
-struct AppIconTile: View {
-    var systemName: String = "circle.hexagongrid.fill"
-    var size: CGFloat = 48
-    var tint: Color = .orange
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.24)
-            .fill(tint.opacity(tint == .white ? 0.2 : 0.12))
-            .frame(width: size, height: size)
-            .overlay(
-                Image(systemName: systemName)
-                    .font(.system(size: size * 0.45))
-                    .foregroundStyle(tint)
-            )
     }
 }
 
