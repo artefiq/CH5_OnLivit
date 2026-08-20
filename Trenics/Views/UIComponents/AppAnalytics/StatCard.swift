@@ -18,7 +18,7 @@ struct StatCard: View {
                 .font(.system(size: 26, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-
+            
             if let delta {
                 HStack(spacing: 3) {
                     Image(systemName: delta.change >= 0 ? "arrow.up.right" : "arrow.down.right")
@@ -27,7 +27,16 @@ struct StatCard: View {
                         .font(.caption.bold())
                 }
                 .foregroundStyle(delta.isPositive ? Color.green : Color.red)
-            } else if let caption {
+            } else {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.right")
+                        .font(.caption2.bold())
+                    Text("0%")
+                        .font(.caption.bold())
+                }
+                .foregroundStyle(Color.gray)
+            }
+            if let caption {
                 Text(caption)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -39,7 +48,7 @@ struct StatCard: View {
         .padding(14)
         .background(Color.cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 }
 

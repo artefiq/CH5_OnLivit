@@ -4,6 +4,11 @@ struct ReviewCard: View {
     let review: CustomerReview
     let response: String?
     let isLoadingResponse: Bool
+    /// Supplied by the page so it can swap in a translation; defaults to what
+    /// the customer actually wrote.
+    var displayTitle: String?
+    var displayBody: String?
+    var isTranslated: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -20,14 +25,20 @@ struct ReviewCard: View {
                     .foregroundStyle(.secondary)
             }
 
-            if let title = review.attributes.title, !title.isEmpty {
+            let title = displayTitle ?? review.attributes.title ?? ""
+            let body = displayBody ?? review.attributes.body ?? ""
+
+            if !title.isEmpty {
                 Text(title).font(.subheadline.bold())
             }
-            if let body = review.attributes.body, !body.isEmpty {
+            if !body.isEmpty {
                 Text(body)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            if isTranslated {
+                TranslatedBadge()
             }
             if let nickname = review.attributes.reviewerNickname {
                 Text("— \(nickname)")

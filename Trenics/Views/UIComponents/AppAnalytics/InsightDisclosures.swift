@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Collapsible tinted card used for the two AI blocks. Collapsed it is just the
-/// titled header, so the numbers stay the first thing on the page and the
-/// generated text is opt-in.
 struct InsightDisclosure<Content: View>: View {
     let title: String
     let systemImage: String
@@ -32,8 +29,8 @@ struct InsightDisclosure<Content: View>: View {
                         .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(expanded ? 180 : 0))
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 20)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -43,8 +40,8 @@ struct InsightDisclosure<Content: View>: View {
                     content
                     OnDeviceBadge()
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -135,10 +132,19 @@ struct AINextStepDisclosure: View {
                 ForEach(Array(actions.enumerated()), id: \.element.id) { index, action in
                     if index > 0 { Divider() }
                     NumberedItem(index: index + 1, title: action.title) {
-                        Text(action.detail)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        // Steps rather than a paragraph: the point of this block
+                        // is that it can be worked through, not just read.
+                        ForEach(Array(action.steps.enumerated()), id: \.offset) { step, text in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text("\(step + 1).")
+                                    .font(.caption.bold().monospacedDigit())
+                                    .foregroundStyle(Color("primaryPurple"))
+                                Text(text)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
                     }
                 }
             }

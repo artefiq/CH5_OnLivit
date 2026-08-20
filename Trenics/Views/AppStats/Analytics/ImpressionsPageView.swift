@@ -343,7 +343,7 @@ struct ImpressionsPageView: View {
     private var content: some View {
         let metrics = model.metrics
 
-        AnalyticsSection(title: "Headline numbers", subtitle: "The period at a glance") {
+        AnalyticsSection(title: "Headline numbers", subtitle: "The period at a glance", showsDivider: false) {
             StatCardRow {
                 StatCard(
                     title: "Impressions",
@@ -368,6 +368,7 @@ struct ImpressionsPageView: View {
             isLoading: model.isGeneratingInsights,
             unavailableMessage: model.insightUnavailableMessage
         )
+        
         AINextStepDisclosure(
             actions: model.actions,
             isLoading: model.isGeneratingInsights

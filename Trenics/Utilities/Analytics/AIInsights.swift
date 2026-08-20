@@ -33,11 +33,11 @@ nonisolated struct InsightFinding: Identifiable, Sendable, Equatable {
     let plainMeaning: String
 }
 
-/// One recommended action, with the reasoning that leads to it.
+/// One recommended action, broken into the steps that carry it out.
 nonisolated struct InsightAction: Identifiable, Sendable, Equatable {
     var id: String { title }
     let title: String
-    let detail: String
+    let steps: [String]
 }
 
 nonisolated enum InsightAvailability: Sendable, Equatable {
@@ -102,8 +102,8 @@ nonisolated struct InsightActionOutput {
     @Guide(description: "The action as a short imperative heading, for example 'Refresh your screenshots and keywords'. Under ten words.")
     var title: String
 
-    @Guide(description: "One or two sentences saying why this action follows from the figures supplied.")
-    var detail: String
+    @Guide(description: "Two or three steps that carry out this action, in the order they should be done. Each step is one short imperative sentence describing something the developer can actually do. Not restatements of the numbers.")
+    var steps: [String]
 }
 
 @Generable
@@ -244,7 +244,7 @@ actor InsightGenerator {
                 generating: InsightActionsOutput.self
             )
             return response.content.actions.map {
-                InsightAction(title: $0.title, detail: $0.detail)
+                InsightAction(title: $0.title, steps: $0.steps)
             }
         } catch {
             return []
@@ -391,8 +391,9 @@ nonisolated enum InsightInstructions {
 
     static let discoverySuggestion = """
     You advise app developers on App Store product page optimisation. Each action \
-    is concrete and testable, and follows from the conversion figures supplied. \
-    Do not restate the numbers as a summary.
+    is concrete and testable, follows from the conversion figures supplied, and \
+    breaks into steps the developer can work through in order. Do not restate the \
+    numbers as a summary.
     """
 
     static let retentionSummary = """
@@ -404,7 +405,8 @@ nonisolated enum InsightInstructions {
 
     static let retentionSuggestion = """
     You advise app developers on retention and churn. Each action is a concrete \
-    investigation or intervention grounded in the figures supplied.
+    investigation or intervention grounded in the figures supplied, broken into \
+    steps the developer can work through in order.
     """
 
     static let reviewsSummary = """
@@ -415,7 +417,8 @@ nonisolated enum InsightInstructions {
 
     static let reviewsSuggestion = """
     You advise app developers on responding to review feedback. Each action is a \
-    concrete change to the app, its paywall copy, or its store listing.
+    concrete change to the app, its paywall copy, or its store listing, broken \
+    into steps the developer can work through in order.
     """
 
     static let accountOverview = """

@@ -29,6 +29,6 @@ struct MetricNavCard: View {
         .padding(20)
         .background(Color.cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
+        .shadow(color: Color.primaryPurple.opacity(0.1), radius: 6, y: 1)
     }
 }
