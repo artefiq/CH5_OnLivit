@@ -10,11 +10,10 @@ import SwiftUI
 @main
 struct TrenicsApp: App {
     @AppStorage("isDarkMode") private var isDarkMode = false
-    @StateObject private var accountsStore = AccountsStore()
     
     var body: some Scene {
         WindowGroup {
-            DashboardView(accountsStore: accountsStore)
+            DashboardView()
                 .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }

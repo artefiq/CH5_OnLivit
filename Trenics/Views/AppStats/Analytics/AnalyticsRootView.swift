@@ -1,17 +1,20 @@
 import SwiftUI
 internal import Combine
 
-/// The screen behind an app card: what each metric means, and a way into each
-/// of the three detail pages.
+/// Entry point for an app's analytics, replacing the old single `AnalyticsView`.
 ///
-/// Replaces the tab bar that used to sit under these pages. The three pages are
-/// now pushed individually, so each owns its own title and back button and the
-/// detail screens are free of chrome that repeated on every one of them.
+/// The three tabs follow the user lifecycle rather than the shape of Apple's
+/// API: Impressions (first contact), Retention (inside the app), Reviews (after
+/// using it). Downloads live inside Impressions because they're the same
+/// funnel; deletions live inside Retention because churn is retention inverted.
+///
+/// All three share one `AnalyticsSession`, so the per-app handshake with App
+/// Store Connect happens once no matter how often the user switches tabs.
 struct AnalyticsRootView: View {
     let app: AppResource
     let account: APIAccount
     @StateObject private var session: AnalyticsSession
-    @State private var lastUpdated: Date?
+    @State private var selection: AnalyticsPage = .impressions
 
     init(app: AppResource, account: APIAccount) {
         self.app = app
@@ -19,58 +22,35 @@ struct AnalyticsRootView: View {
         _session = StateObject(wrappedValue: AnalyticsSession(app: app, account: account))
     }
 
+    enum AnalyticsPage: Hashable {
+        case impressions, retention, reviews
+    }
+
     var body: some View {
         Group {
             if account.isUsable {
-                hub
+                // MainLayout is applied inside each page rather than around the
+                // TabView: the TabView paints its own opaque background over
+                // anything behind it, so decoration placed out here is hidden.
+                TabView(selection: $selection) {
+                    ImpressionsPageView(session: session)
+                        .tabItem { Label("Impressions", systemImage: "eye") }
+                        .tag(AnalyticsPage.impressions)
+
+                    RetentionPageView(session: session)
+                        .tabItem { Label("Retention", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") }
+                        .tag(AnalyticsPage.retention)
+
+                    ReviewsPageView(session: session)
+                        .tabItem { Label("Reviews", systemImage: "star.bubble") }
+                        .tag(AnalyticsPage.reviews)
+                }
             } else {
                 missingCredentials
             }
         }
+        .navigationTitle(app.attributes.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadFreshness() }
-    }
-
-    private var hub: some View {
-        MainLayout {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    AppDetailHeader(app: app, account: account, lastUpdated: lastUpdated)
-                        .padding(.bottom, 4)
-
-                    NavigationLink {
-                        ImpressionsPageView(session: session)
-                    } label: {
-                        MetricNavCard(
-                            title: "Impressions",
-                            description: "How many people saw and downloaded your app."
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    NavigationLink {
-                        RetentionPageView(session: session)
-                    } label: {
-                        MetricNavCard(
-                            title: "Retention",
-                            description: "The % of users still using your app days after installing."
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    NavigationLink {
-                        ReviewsPageView(session: session)
-                    } label: {
-                        MetricNavCard(
-                            title: "Reviews",
-                            description: "Your star rating and what people say about your app."
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .padding(20)
-            }
-        }
     }
 
     private var missingCredentials: some View {
@@ -83,15 +63,5 @@ struct AnalyticsRootView: View {
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    /// Reads when the dashboard last pulled this app's figures, so the header
-    /// reports real freshness without fetching anything itself.
-    private func loadFreshness() async {
-        let cached = await AnalyticsCacheStore.shared.load(
-            AppDashboardMetrics.self,
-            key: "\(app.id)-dashboard-metrics"
-        )
-        lastUpdated = cached?.fetchedAt
     }
 }

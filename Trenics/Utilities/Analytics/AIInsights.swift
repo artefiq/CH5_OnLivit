@@ -4,6 +4,11 @@ import FoundationModels
 #endif
 
 // MARK: - View-facing results
+//
+// These are plain structs rather than the @Generable types so the views keep
+// compiling on SDKs without FoundationModels, and so the UI never has to know
+// whether a value came from the model or from a deterministic fallback.
+
 nonisolated struct InsightSummary: Sendable, Equatable {
     let headline: String
     let detail: String
@@ -22,22 +27,6 @@ nonisolated struct ReviewThemeInsight: Identifiable, Sendable, Equatable {
     let sentiment: ReviewSentiment
     let reviewCount: Int
     let representativeQuote: String
-}
-
-/// One thing the numbers show: a heading, the observations behind it, and the
-/// same point restated in everyday language.
-nonisolated struct InsightFinding: Identifiable, Sendable, Equatable {
-    var id: String { title }
-    let title: String
-    let points: [String]
-    let plainMeaning: String
-}
-
-/// One recommended action, broken into the steps that carry it out.
-nonisolated struct InsightAction: Identifiable, Sendable, Equatable {
-    var id: String { title }
-    let title: String
-    let steps: [String]
 }
 
 nonisolated enum InsightAvailability: Sendable, Equatable {
@@ -80,39 +69,6 @@ nonisolated struct InsightSuggestionOutput {
 }
 
 @Generable
-nonisolated struct InsightFindingOutput {
-    @Guide(description: "A short heading naming what is happening, under ten words. Do not number it.")
-    var title: String
-
-    @Guide(description: "One or two short factual observations. Each is a complete sentence citing a figure that was supplied. Never invent a number.")
-    var points: [String]
-
-    @Guide(description: "The same finding restated in everyday language for someone who does not read analytics. One sentence, no numbers.")
-    var plainMeaning: String
-}
-
-@Generable
-nonisolated struct InsightFindingsOutput {
-    @Guide(description: "Two findings, the most important first.")
-    var findings: [InsightFindingOutput]
-}
-
-@Generable
-nonisolated struct InsightActionOutput {
-    @Guide(description: "The action as a short imperative heading, for example 'Refresh your screenshots and keywords'. Under ten words.")
-    var title: String
-
-    @Guide(description: "Two or three steps that carry out this action, in the order they should be done. Each step is one short imperative sentence describing something the developer can actually do. Not restatements of the numbers.")
-    var steps: [String]
-}
-
-@Generable
-nonisolated struct InsightActionsOutput {
-    @Guide(description: "Two actions, the most valuable first.")
-    var actions: [InsightActionOutput]
-}
-
-@Generable
 nonisolated struct ReviewThemeOutput {
     @Guide(description: "A recurring topic in two or three words, lowercase — for example 'subscription pricing' or 'sync reliability'.")
     var theme: String
@@ -137,9 +93,20 @@ nonisolated struct ReviewThemesOutput {
 
 // MARK: - Generator
 
+/// Wraps Apple's on-device model.
+///
+/// Everything here runs locally: the aggregated figures for Impressions and
+/// Retention never leave the device, and — more importantly — neither do review
+/// bodies, which are customer-authored content. That's both the privacy-correct
+/// choice and the intended use of the framework.
+///
+/// Every entry point returns an optional and swallows failures. A missing
+/// insight card is a normal state (no Apple Intelligence, model busy, guardrail
+/// tripped), not an error worth interrupting the page for.
 actor InsightGenerator {
     static let shared = InsightGenerator()
 
+    /// Roughly how much review text to feed the model in one pass.
     private let maxReviewsForThemes = 40
     private let maxReviewCharacters = 280
 
@@ -198,80 +165,6 @@ actor InsightGenerator {
                 rationale: output.rationale,
                 confidence: output.confidence
             )
-        } catch {
-            return nil
-        }
-        #else
-        return nil
-        #endif
-    }
-
-    // MARK: Structured findings & actions
-
-    /// The analytics pages render these as numbered, expandable lists, so the
-    /// model is asked for structure rather than prose.
-    func findings(instructions: String, facts: String) async -> [InsightFinding] {
-        #if canImport(FoundationModels)
-        guard availability.isAvailable else { return [] }
-        do {
-            let session = LanguageModelSession(instructions: instructions)
-            let response = try await session.respond(
-                to: Self.summaryPrompt(facts: facts),
-                generating: InsightFindingsOutput.self
-            )
-            return response.content.findings.map {
-                InsightFinding(
-                    title: $0.title,
-                    points: $0.points,
-                    plainMeaning: $0.plainMeaning
-                )
-            }
-        } catch {
-            return []
-        }
-        #else
-        return []
-        #endif
-    }
-
-    func actions(instructions: String, facts: String) async -> [InsightAction] {
-        #if canImport(FoundationModels)
-        guard availability.isAvailable else { return [] }
-        do {
-            let session = LanguageModelSession(instructions: instructions)
-            let response = try await session.respond(
-                to: Self.suggestionPrompt(facts: facts),
-                generating: InsightActionsOutput.self
-            )
-            return response.content.actions.map {
-                InsightAction(title: $0.title, steps: $0.steps)
-            }
-        } catch {
-            return []
-        }
-        #else
-        return []
-        #endif
-    }
-
-    // MARK: Per-stat explanation
-
-    /// Plain-language explanation of one specific figure, for the
-    /// "What does it mean?" rows. Returns free text rather than a @Generable
-    /// struct because the caller renders it as a single paragraph.
-    func explanation(instructions: String, facts: String) async -> String? {
-        #if canImport(FoundationModels)
-        guard availability.isAvailable else { return nil }
-        do {
-            let session = LanguageModelSession(instructions: instructions)
-            let response = try await session.respond(
-                to: """
-                Explain what these figures mean for the developer:
-
-                \(facts)
-                """
-            )
-            return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             return nil
         }
@@ -383,56 +276,34 @@ actor InsightGenerator {
 
 nonisolated enum InsightInstructions {
     static let discoverySummary = """
-    You analyse App Store discovery funnels for an app developer. Each finding \
-    names one thing the numbers show, backs it with observations drawn only from \
-    the figures supplied, and then restates it without jargon. Describe what \
-    happened — a separate card handles what to do.
+    You analyse App Store discovery funnels for an app developer. Be specific and \
+    quantitative. Reference only the figures supplied. Two or three sentences total, \
+    plain language, no marketing tone.
     """
 
     static let discoverySuggestion = """
-    You advise app developers on App Store product page optimisation. Each action \
-    is concrete and testable, follows from the conversion figures supplied, and \
-    breaks into steps the developer can work through in order. Do not restate the \
-    numbers as a summary.
+    You advise app developers on App Store product page optimisation. Recommend one \
+    concrete, testable action grounded in the supplied conversion figures.
     """
 
     static let retentionSummary = """
     You analyse mobile app retention for an app developer. Look for correlations \
-    across the supplied metrics — a retention drop next to a crash spike or a \
-    version release matters more than either alone — and make the correlation the \
-    finding when one exists. Describe what happened, not what to do.
+    across the supplied metrics — a retention drop next to a crash spike or a version \
+    release matters more than either alone. State the correlation if one exists.
     """
 
     static let retentionSuggestion = """
-    You advise app developers on retention and churn. Each action is a concrete \
-    investigation or intervention grounded in the figures supplied, broken into \
-    steps the developer can work through in order.
+    You advise app developers on retention and churn. Recommend one concrete \
+    investigation or intervention grounded in the supplied figures.
     """
 
     static let reviewsSummary = """
     You analyse App Store review sentiment for an app developer. Be specific about \
-    which themes drive which ratings, and over what period. Describe what the \
-    reviews show, not what to do about them.
+    which themes drive which ratings, and over what period.
     """
 
     static let reviewsSuggestion = """
-    You advise app developers on responding to review feedback. Each action is a \
-    concrete change to the app, its paywall copy, or its store listing, broken \
-    into steps the developer can work through in order.
+    You advise app developers on responding to review feedback. Recommend one \
+    concrete change to the app, its paywall copy, or its store listing.
     """
-
-    static let accountOverview = """
-    You summarise an app portfolio for its developer, for a dashboard card they \
-    glance at. Two short sentences, plain language, no jargon. Say which app \
-    stands out and why. Reference only the figures supplied, and never invent a \
-    number. Describe the state of things — do not recommend actions.
-    """
-
-    static let statExplainer = """
-    You explain App Store analytics to an app developer who is not an analyst. \
-    Two or three short sentences. Say what the number means and whether it is \
-    good or bad, in plain words. Use only the figures given and never invent \
-    one. No headings, no bullet points, no preamble — just the explanation.
-    """
-
 }

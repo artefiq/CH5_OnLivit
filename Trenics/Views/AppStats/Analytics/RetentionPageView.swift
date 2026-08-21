@@ -159,8 +159,8 @@ final class RetentionPageModel: ObservableObject {
     @Published private(set) var isGeneratingInsights = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var warnings: [String] = []
-    @Published private(set) var findings: [InsightFinding] = []
-    @Published private(set) var actions: [InsightAction] = []
+    @Published private(set) var summary: InsightSummary?
+    @Published private(set) var suggestion: InsightSuggestion?
     @Published private(set) var insightUnavailableMessage: String?
     @Published var range: AnalyticsTimeRange = .month
 
@@ -260,15 +260,15 @@ final class RetentionPageModel: ObservableObject {
 
     private func generateInsights() async {
         guard metrics.hasData else {
-            findings = []
-            actions = []
+            summary = nil
+            suggestion = nil
             return
         }
         let availability = await InsightGenerator.shared.availability
         guard availability.isAvailable else {
             insightUnavailableMessage = availability.message
-            findings = []
-            actions = []
+            summary = nil
+            suggestion = nil
             return
         }
         insightUnavailableMessage = nil
@@ -276,15 +276,15 @@ final class RetentionPageModel: ObservableObject {
         defer { isGeneratingInsights = false }
 
         let facts = metrics.factSheet(appName: session.app.attributes.name, range: range)
-        async let generatedFindings = InsightGenerator.shared.findings(
+        async let generatedSummary = InsightGenerator.shared.summary(
             instructions: InsightInstructions.retentionSummary, facts: facts
         )
-        async let generatedActions = InsightGenerator.shared.actions(
+        async let generatedSuggestion = InsightGenerator.shared.suggestion(
             instructions: InsightInstructions.retentionSuggestion, facts: facts
         )
-        let (newFindings, newActions) = await (generatedFindings, generatedActions)
-        findings = newFindings
-        actions = newActions
+        let (newSummary, newSuggestion) = await (generatedSummary, generatedSuggestion)
+        summary = newSummary
+        suggestion = newSuggestion
     }
 }
 
@@ -333,8 +333,6 @@ struct RetentionPageView: View {
                 Task { await model.rangeChanged() }
             }
         }
-        .navigationTitle("Retention")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var header: some View {
@@ -355,89 +353,57 @@ struct RetentionPageView: View {
         let metrics = model.metrics
 
         if !metrics.curve.isEmpty {
-            AnalyticsSection(title: "Retention curve", subtitle: "Share of installs still active on each day") {
+            SectionCard(title: "Retention curve", subtitle: "Share of installs still active on each day") {
                 RetentionCurveChart(points: metrics.curve)
-                ExplainerRow(
-                    facts: metrics.curve
-                        .map { "Day \($0.day) retention: \($0.rate.percentFormatted)" }
-                        .joined(separator: "\n"),
-                    fallback: """
-                    Each point is the share of people who installed your app and were still using \
-                    it that many days later. The curve always falls; what matters is how fast. A \
-                    sharp drop in the first day usually points at onboarding, while a slide later \
-                    on points at whether the app stays useful.
-                    """
-                )
             }
         }
 
-        AnalyticsSection(title: "Headline numbers", subtitle: "The period at a glance") {
-            StatCardRow {
-                StatCard(
-                    title: "Day 1",
-                    value: metrics.day1.map(\.percentFormatted) ?? "—",
-                    caption: "Retained"
-                )
-                StatCard(
-                    title: "Day 7",
-                    value: metrics.day7.map(\.percentFormatted) ?? "—",
-                    caption: "Retained"
-                )
-                StatCard(
-                    title: "Day 28",
-                    value: metrics.day28.map(\.percentFormatted) ?? "—",
-                    caption: "Retained"
-                )
-                StatCard(
-                    title: "Sessions",
-                    value: metrics.sessions.compactFormatted,
-                    delta: metrics.sessionsDelta
-                )
-                StatCard(
-                    title: "Deletions",
-                    value: metrics.deletions.compactFormatted,
-                    delta: metrics.deletionsDelta
-                )
-                StatCard(
-                    title: "Crash rate",
-                    value: metrics.crashes > 0 ? metrics.crashRate.percentFormatted : "—",
-                    caption: "Per session"
-                )
-            }
-            ExplainerRow(
-                facts: """
-                Day 1 retention: \(metrics.day1?.percentFormatted ?? "not available")
-                Day 7 retention: \(metrics.day7?.percentFormatted ?? "not available")
-                Day 28 retention: \(metrics.day28?.percentFormatted ?? "not available")
-                Sessions: \(Int(metrics.sessions))
-                Deletions: \(Int(metrics.deletions)) out of \(Int(metrics.installs)) installs (\(metrics.deletionRate.percentFormatted))
-                Crashes: \(Int(metrics.crashes)), which is \(metrics.crashRate.percentFormatted) per session
-                Sessions change vs the previous period: \(metrics.sessionsDelta?.formatted ?? "not available")
-                Deletions change vs the previous period: \(metrics.deletionsDelta?.formatted ?? "not available")
-                """,
-                fallback: """
-                Day 1, 7 and 28 are the share of new users still active after that many days. \
-                Sessions count how often the app was opened. Deletions are uninstalls — the \
-                opposite of retention. Crash rate is crashes per session, and a rise here usually \
-                shows up as a retention drop shortly afterwards.
-                """
+        StatCardRow {
+            StatCard(
+                title: "Day 1",
+                value: metrics.day1.map(\.percentFormatted) ?? "—",
+                caption: "Retained"
+            )
+            StatCard(
+                title: "Day 7",
+                value: metrics.day7.map(\.percentFormatted) ?? "—",
+                caption: "Retained"
+            )
+            StatCard(
+                title: "Day 28",
+                value: metrics.day28.map(\.percentFormatted) ?? "—",
+                caption: "Retained"
+            )
+            StatCard(
+                title: "Sessions",
+                value: metrics.sessions.compactFormatted,
+                delta: metrics.sessionsDelta
+            )
+            StatCard(
+                title: "Deletions",
+                value: metrics.deletions.compactFormatted,
+                delta: metrics.deletionsDelta
+            )
+            StatCard(
+                title: "Crash rate",
+                value: metrics.crashes > 0 ? metrics.crashRate.percentFormatted : "—",
+                caption: "Per session"
             )
         }
 
-        AISummaryDisclosure(
-            findings: model.findings,
+        AISummaryCard(
+            summary: model.summary,
+            range: model.range,
             isLoading: model.isGeneratingInsights,
             unavailableMessage: model.insightUnavailableMessage
         )
-        AINextStepDisclosure(
-            actions: model.actions,
+        AISuggestionCard(
+            suggestion: model.suggestion,
             isLoading: model.isGeneratingInsights
         )
 
-        Divider()
-
         if !metrics.sessionSeries.isEmpty || !metrics.deletionSeries.isEmpty {
-            AnalyticsSection(
+            SectionCard(
                 title: "Engagement vs churn",
                 subtitle: "Deletions plotted against sessions over the same window"
             ) {
@@ -445,84 +411,25 @@ struct RetentionPageView: View {
                     sessions: metrics.sessionSeries,
                     deletions: metrics.deletionSeries
                 )
-                ExplainerRow(
-                    facts: """
-                    Sessions per day: \(Self.describeSeries(metrics.sessionSeries))
-                    Deletions per day: \(Self.describeSeries(metrics.deletionSeries))
-                    """,
-                    fallback: """
-                    The line is how much your app is being used; the bars are people removing it. \
-                    Seen together they tell a fuller story than either alone — deletions climbing \
-                    while sessions fall is churn, whereas both climbing usually just means growth.
-                    """
-                )
             }
         }
 
         if !metrics.crashSeries.isEmpty {
-            AnalyticsSection(title: "Crashes over time") {
+            SectionCard(title: "Crashes over time") {
                 CrashChart(points: metrics.crashSeries)
-                ExplainerRow(
-                    facts: "Crashes per day: \(Self.describeSeries(metrics.crashSeries))",
-                    fallback: """
-                    How often your app crashed on each day. A sudden spike almost always lines up \
-                    with a release, so compare the date of a jump against when you last shipped.
-                    """
-                )
             }
         }
 
         if !metrics.crashesByVersion.isEmpty {
-            AnalyticsSection(title: "Crashes by app version", subtitle: "A strong leading indicator for retention drops") {
+            SectionCard(title: "Crashes by app version", subtitle: "A strong leading indicator for retention drops") {
                 BreakdownListView(items: metrics.crashesByVersion)
-                ExplainerRow(
-                    facts: "Crashes by app version: \(Self.describeBreakdown(metrics.crashesByVersion))",
-                    fallback: """
-                    Crashes split by the version people were running. One version carrying most of \
-                    them points at a regression you shipped in that release rather than a \
-                    long-standing bug.
-                    """
-                )
             }
         }
         if !metrics.deletionsByVersion.isEmpty {
-            AnalyticsSection(title: "Deletions by app version", showsDivider: false) {
+            SectionCard(title: "Deletions by app version") {
                 BreakdownListView(items: metrics.deletionsByVersion)
-                ExplainerRow(
-                    facts: "Deletions by app version: \(Self.describeBreakdown(metrics.deletionsByVersion))",
-                    fallback: """
-                    Uninstalls split by version. If one release is losing far more people than the \
-                    others, whatever changed in it is worth a close look.
-                    """
-                )
             }
         }
-    }
-
-    // MARK: Fact sheets for the explainers
-
-    private static func describeSeries(_ series: [TrendPoint]) -> String {
-        guard !series.isEmpty else { return "no data" }
-        let total = series.reduce(0) { $0 + $1.value }
-        var parts = [
-            "\(series.count) days",
-            "total \(Int(total))",
-            "average \(Int(total / Double(series.count)))",
-            "first day \(Int(series.first?.value ?? 0))",
-            "last day \(Int(series.last?.value ?? 0))"
-        ]
-        if let peak = series.max(by: { $0.value < $1.value }) {
-            parts.append("peak \(Int(peak.value))")
-        }
-        return parts.joined(separator: ", ")
-    }
-
-    private static func describeBreakdown(_ items: [BreakdownItem]) -> String {
-        guard !items.isEmpty else { return "no data" }
-        let total = items.reduce(0) { $0 + $1.value }
-        return items
-            .map { "\($0.label) \(Int($0.value)) (\($0.share(of: total).percentFormatted))" }
-            .joined(separator: ", ")
     }
 }
 
