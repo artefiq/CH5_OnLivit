@@ -9,7 +9,7 @@ import Foundation
 internal import Combine
 import Security
 
-struct APIAccount: Identifiable, Codable, Equatable {
+struct APIAccount: Identifiable, Codable, Equatable, Hashable {
     var id: UUID = UUID()
     var label: String
     var issuerId: String

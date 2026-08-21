@@ -44,6 +44,13 @@ struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @AppStorage("isDarkMode") private var isDarkMode = false
     @ObservedObject var accountsStore: AccountsStore
+
+    /// Name of the account just switched to, shown briefly then cleared.
+    @State private var switchedToName: String?
+    @State private var accountToEdit: APIAccount?
+    @State private var accountToDelete: APIAccount?
+    @State private var isConfirmingLogOut = false
+    @State private var bannerDismissTask: Task<Void, Never>?
     
     var body: some View {
         MainLayout {
@@ -73,12 +80,62 @@ struct ProfileView: View {
                                 isSelected: accountsStore.selectedAccountId == account.id
                             )
                             .onTapGesture {
-                                accountsStore.selectedAccountId = account.id
+                                select(account)
+                            }
+                            // Swipe rather than always-visible buttons, so the
+                            // row looks exactly as it did before.
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    accountToDelete = account
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+
+                                Button {
+                                    accountToEdit = account
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(Color("primaryPurple"))
                             }
                         }
                     }
 
                     AddAccountRowView(accountsStore: accountsStore)
+
+                    if let selected = accountsStore.selectedAccount {
+                        Button {
+                            isConfirmingLogOut = true
+                        } label: {
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.red.opacity(0.12))
+                                        .frame(width: 40, height: 40)
+
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .foregroundColor(.red)
+                                        .font(.body)
+                                        .bold()
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Log Out")
+                                        .font(.body)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                    Text(selected.label.isEmpty ? "Unnamed Account" : selected.label)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                 } header: {
                     VStack(alignment: .leading, spacing: 16) {
@@ -131,6 +188,72 @@ struct ProfileView: View {
             .padding(.horizontal, 8)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .top) {
+            if let switchedToName {
+                AccountSwitchBanner(accountName: switchedToName)
+            }
+        }
+        .navigationDestination(item: $accountToEdit) { account in
+            CredentialsView(accountsStore: accountsStore, existingAccount: account)
+        }
+        .confirmationDialog(
+            "Delete \(accountToDelete?.label ?? "this account")?",
+            isPresented: Binding(
+                get: { accountToDelete != nil },
+                set: { if !$0 { accountToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Account", role: .destructive) {
+                if let accountToDelete {
+                    accountsStore.deleteAccount(accountToDelete)
+                }
+                accountToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { accountToDelete = nil }
+        } message: {
+            Text("Its API key will be removed from this device. Your apps and data in App Store Connect are not affected.")
+        }
+        .confirmationDialog(
+            "Log out of \(accountsStore.selectedAccount?.label ?? "this account")?",
+            isPresented: $isConfirmingLogOut,
+            titleVisibility: .visible
+        ) {
+            Button("Log Out", role: .destructive) { logOutSelected() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Its API key will be removed from this device. You can add it again at any time.")
+        }
+        .onDisappear { bannerDismissTask?.cancel() }
+    }
+
+    // MARK: Actions
+
+    private func select(_ account: APIAccount) {
+        guard accountsStore.selectedAccountId != account.id else { return }
+        accountsStore.selectedAccountId = account.id
+        HapticManager.selectionChanged()
+        showBanner(for: account.label.isEmpty ? "Unnamed Account" : account.label)
+    }
+
+    private func logOutSelected() {
+        guard let current = accountsStore.selectedAccount else { return }
+        accountsStore.deleteAccount(current)
+        // Deleting the selected account promotes the next one, so say which,
+        // rather than leaving the header to change silently again.
+        if let next = accountsStore.selectedAccount {
+            showBanner(for: next.label.isEmpty ? "Unnamed Account" : next.label)
+        }
+    }
+
+    private func showBanner(for name: String) {
+        bannerDismissTask?.cancel()
+        withAnimation(.easeOut(duration: 0.25)) { switchedToName = name }
+        bannerDismissTask = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.2)) { switchedToName = nil }
+        }
     }
 }
 
