@@ -6,17 +6,6 @@ nonisolated struct CachedPayload<Value: Codable & Sendable>: Codable, Sendable {
     let fetchedAt: Date
 }
 
-/// Disk-backed JSON cache for analytics data.
-///
-/// App Store Connect's analytics reports are produced by a nightly batch — a
-/// given day's data is only considered complete about two days later — so
-/// refetching on every tab switch spends requests on data that cannot have
-/// changed. Freshness is therefore keyed off the calendar day rather than a
-/// rolling 24-hour timer: opening the app at 11pm and again at 1am should pick
-/// up the new day's batch, which a rolling timer would miss.
-///
-/// Files live in Caches (evictable by the system, excluded from backup), so the
-/// cache survives relaunches, not just tab switches.
 actor AnalyticsCacheStore {
     static let shared = AnalyticsCacheStore()
 

@@ -1,6 +1,9 @@
 import SwiftUI
 import Charts
 internal import Combine
+#if canImport(Translation)
+import Translation
+#endif
 
 // MARK: - Derived metrics
 
@@ -105,8 +108,8 @@ final class ReviewsPageModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isGeneratingInsights = false
     @Published private(set) var errorMessage: String?
-    @Published private(set) var summary: InsightSummary?
-    @Published private(set) var suggestion: InsightSuggestion?
+    @Published private(set) var findings: [InsightFinding] = []
+    @Published private(set) var actions: [InsightAction] = []
     @Published private(set) var insightUnavailableMessage: String?
     @Published var range: AnalyticsTimeRange = .month
     @Published var filter = ReviewFilter()
@@ -191,16 +194,16 @@ final class ReviewsPageModel: ObservableObject {
         let scoped = ReviewStatistics.within(reviews, range: range)
         guard !scoped.isEmpty else {
             themes = []
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         let availability = await InsightGenerator.shared.availability
         guard availability.isAvailable else {
             insightUnavailableMessage = availability.message
             themes = []
-            summary = nil
-            suggestion = nil
+            findings = []
+            actions = []
             return
         }
         insightUnavailableMessage = nil
@@ -217,15 +220,15 @@ final class ReviewsPageModel: ObservableObject {
             range: range,
             themes: extracted
         )
-        async let generatedSummary = InsightGenerator.shared.summary(
+        async let generatedFindings = InsightGenerator.shared.findings(
             instructions: InsightInstructions.reviewsSummary, facts: facts
         )
-        async let generatedSuggestion = InsightGenerator.shared.suggestion(
+        async let generatedActions = InsightGenerator.shared.actions(
             instructions: InsightInstructions.reviewsSuggestion, facts: facts
         )
-        let (newSummary, newSuggestion) = await (generatedSummary, generatedSuggestion)
-        summary = newSummary
-        suggestion = newSuggestion
+        let (newFindings, newActions) = await (generatedFindings, generatedActions)
+        findings = newFindings
+        actions = newActions
     }
 }
 
@@ -233,9 +236,40 @@ final class ReviewsPageModel: ObservableObject {
 
 struct ReviewsPageView: View {
     @StateObject private var model: ReviewsPageModel
+    @StateObject private var translation = ReviewTranslationStore()
+    #if canImport(Translation)
+    /// Setting this is what starts a pass — `.translationTask` opens a session
+    /// whenever the configuration changes.
+    @State private var translationConfiguration: TranslationSession.Configuration?
+    #endif
 
     init(session: AnalyticsSession) {
         _model = StateObject(wrappedValue: ReviewsPageModel(session: session))
+    }
+
+    private func toggleTranslation() {
+        if translation.isShowingTranslation {
+            translation.showOriginal()
+            return
+        }
+        let items = translatableItems
+        guard !items.isEmpty else { return }
+        // Already translated once, so just switch back to it.
+        if translation.isCovered(items) {
+            translation.showTranslation()
+            return
+        }
+        #if canImport(Translation)
+        translation.beginTranslating()
+        // A fresh configuration each time, otherwise an unchanged value would
+        // not retrigger the task after an earlier failure.
+        translationConfiguration = TranslationSession.Configuration(
+            source: nil,
+            target: Locale.Language(identifier: "en")
+        )
+        #else
+        translation.fail("Translation isn't available on this device.")
+        #endif
     }
 
     var body: some View {
@@ -270,6 +304,13 @@ struct ReviewsPageView: View {
                 model.rangeChanged()
             }
         }
+        .navigationTitle("Reviews")
+        .navigationBarTitleDisplayMode(.inline)
+        #if canImport(Translation)
+        .translationTask(translationConfiguration) { session in
+            await translation.translate(items: translatableItems, using: session)
+        }
+        #endif
     }
 
     private var header: some View {
@@ -288,24 +329,24 @@ struct ReviewsPageView: View {
     @ViewBuilder
     private var content: some View {
         ratingHero
-        AISummaryCard(
-            summary: model.summary,
-            range: model.range,
+        AISummaryDisclosure(
+            findings: model.findings,
             isLoading: model.isGeneratingInsights,
             unavailableMessage: model.insightUnavailableMessage
         )
-        AISuggestionCard(
-            suggestion: model.suggestion,
+        AINextStepDisclosure(
+            actions: model.actions,
             isLoading: model.isGeneratingInsights
         )
+
+        Divider()
         sentimentSection
         trendSection
-        themeSection
-        reviewList
+        themesAndReviews
     }
 
     private var ratingHero: some View {
-        SectionCard(title: "Ratings") {
+        AnalyticsSection(title: "Ratings") {
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 4) {
                     Text(String(format: "%.2f", model.metrics.average))
@@ -327,12 +368,36 @@ struct ReviewsPageView: View {
 
                 RatingHistogramView(buckets: model.metrics.histogram)
             }
+            ExplainerRow(
+                facts: """
+                Average review score: \(String(format: "%.2f", model.metrics.average)) out of 5
+                Total reviews in this period: \(model.metrics.total)
+                Star breakdown: \(model.metrics.histogram.map { "\($0.stars) star: \($0.count)" }.joined(separator: ", "))
+                Change vs the previous period: \(model.metrics.averageDelta?.formatted ?? "not available")
+                """,
+                fallback: """
+                The big number is the average of the written reviews in this period, and the bars \
+                show how many landed on each star. A healthy app is usually top-heavy; a bulge at \
+                one star means a specific complaint rather than general dissatisfaction.
+                """
+            )
         }
     }
 
     private var sentimentSection: some View {
-        SectionCard(title: "Sentiment", subtitle: "Tap a slice legend to filter the list below") {
+        AnalyticsSection(title: "Sentiment", subtitle: "Tap a filter below to narrow the list") {
             SentimentDonutView(counts: model.metrics.sentimentCounts)
+            ExplainerRow(
+                facts: ReviewSentiment.allCases
+                    .map { "\($0.label): \(model.metrics.sentimentCounts[$0] ?? 0) reviews" }
+                    .joined(separator: ", "),
+                fallback: """
+                Reviews grouped by tone: four and five stars count as positive, three as neutral, \
+                and one or two as negative. The split matters more than the average — a mix of \
+                fives and ones averages the same as a pile of threes but means something very \
+                different.
+                """
+            )
         }
     }
 
@@ -340,55 +405,103 @@ struct ReviewsPageView: View {
     private var trendSection: some View {
         let trend = model.trend
         if trend.count > 1 {
-            SectionCard(
+            AnalyticsSection(
                 title: "Rating over time",
                 subtitle: "A rating dip alongside a volume spike usually means a release regression"
             ) {
                 ReviewTrendChart(points: trend)
+                ExplainerRow(
+                    facts: {
+                        let averages = trend.map(\.average)
+                        let counts = trend.map(\.count)
+                        let mean = averages.reduce(0, +) / Double(averages.count)
+                        return """
+                        Days covered: \(trend.count)
+                        Average rating across those days: \(String(format: "%.2f", mean))
+                        First day average: \(String(format: "%.2f", averages.first ?? 0))
+                        Last day average: \(String(format: "%.2f", averages.last ?? 0))
+                        Lowest day average: \(String(format: "%.2f", averages.min() ?? 0))
+                        Total reviews: \(counts.reduce(0, +)), busiest day \(counts.max() ?? 0)
+                        """
+                    }(),
+                    fallback: """
+                    The line is your average rating per day and the bars are how many reviews \
+                    arrived. A dip in the line at the same time as a jump in the bars usually means \
+                    a release upset people, because unhappy users write reviews in bursts.
+                    """
+                )
             }
         }
     }
 
+    /// Themes and the reviews they were drawn from, in one section. They are
+    /// the same material — a theme is a summary of these reviews — so a divider
+    /// between them implied a separation that isn't there.
     @ViewBuilder
-    private var themeSection: some View {
+    private var themesAndReviews: some View {
+        AnalyticsSection(
+            title: "Themes",
+            subtitle: "Extracted on-device from your review text — tap one to filter",
+            showsDivider: false
+        ) {
+            themeContent
+            reviewContent
+        } accessory: {
+            TranslateButton(
+                isShowingTranslation: translation.isShowingTranslation,
+                isTranslating: translation.isTranslating,
+                action: toggleTranslation
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var themeContent: some View {
         if model.isGeneratingInsights && model.themes.isEmpty {
-            SectionCard(title: "Themes", subtitle: "Extracted on-device from review text") {
-                ProgressView().controlSize(.small)
-            }
+            ProgressView().controlSize(.small)
         } else if !model.themes.isEmpty {
-            SectionCard(title: "Themes", subtitle: "Extracted on-device — tap to filter") {
-                VStack(alignment: .leading, spacing: 12) {
-                    ThemeTagsView(themes: model.themes, selected: $model.filter.theme)
-                    if let selected = model.filter.theme,
-                       let theme = model.themes.first(where: { $0.theme == selected }),
-                       !theme.representativeQuote.isEmpty {
-                        Text("“\(theme.representativeQuote)”")
+            VStack(alignment: .leading, spacing: 12) {
+                ThemeTagsView(
+                    themes: displayThemes,
+                    selected: $model.filter.theme
+                )
+                if let selected = model.filter.theme,
+                   let index = model.themes.firstIndex(where: { $0.theme == selected }),
+                   !model.themes[index].representativeQuote.isEmpty {
+                    let quoteId = Self.quoteId(model.themes[index])
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("“\(translation.display(model.themes[index].representativeQuote, id: quoteId))”")
                             .font(.callout.italic())
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        if translation.hasTranslation(id: quoteId) {
+                            TranslatedBadge()
+                        }
                     }
-                    OnDeviceBadge()
                 }
+                if let message = translation.errorMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                OnDeviceBadge()
             }
         }
     }
 
     @ViewBuilder
-    private var reviewList: some View {
+    private var reviewContent: some View {
         let filtered = model.filteredReviews
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Reviews")
-                    .font(.headline)
-                Spacer()
+                filterBar
                 if model.filter.isActive {
-                    Button("Clear filters") { model.filter = ReviewFilter() }
+                    Button("Clear") { model.filter = ReviewFilter() }
                         .font(.caption)
                 }
             }
-
-            filterBar
 
             if filtered.isEmpty {
                 AnalyticsEmptyState(
@@ -401,12 +514,58 @@ struct ReviewsPageView: View {
                     ReviewCard(
                         review: review,
                         response: model.response(for: review),
-                        isLoadingResponse: model.isLoadingResponse(review)
+                        isLoadingResponse: model.isLoadingResponse(review),
+                        displayTitle: translation.display(
+                            review.attributes.title ?? "", id: "\(review.id)-title"
+                        ),
+                        displayBody: translation.display(
+                            review.attributes.body ?? "", id: "\(review.id)-body"
+                        ),
+                        isTranslated: translation.hasTranslation(id: "\(review.id)-body")
+                            || translation.hasTranslation(id: "\(review.id)-title")
                     )
                     .task { await model.loadResponseIfNeeded(for: review) }
                 }
             }
         }
+    }
+
+    /// Theme names go through translation too, so a filter chip reads in the
+    /// same language as the quote it belongs to.
+    private var displayThemes: [ReviewThemeInsight] {
+        guard translation.isShowingTranslation else { return model.themes }
+        return model.themes.map { theme in
+            ReviewThemeInsight(
+                theme: translation.display(theme.theme, id: Self.themeId(theme)),
+                sentiment: theme.sentiment,
+                reviewCount: theme.reviewCount,
+                representativeQuote: theme.representativeQuote
+            )
+        }
+    }
+
+    static func themeId(_ theme: ReviewThemeInsight) -> String { "theme-\(theme.theme)" }
+    static func quoteId(_ theme: ReviewThemeInsight) -> String { "quote-\(theme.theme)" }
+
+    /// Everything visible in this section, so one pass covers the themes, their
+    /// quotes and the reviews underneath.
+    private var translatableItems: [TranslatableItem] {
+        var items: [TranslatableItem] = []
+        for theme in model.themes {
+            items.append(TranslatableItem(id: Self.themeId(theme), text: theme.theme))
+            if !theme.representativeQuote.isEmpty {
+                items.append(TranslatableItem(id: Self.quoteId(theme), text: theme.representativeQuote))
+            }
+        }
+        for review in model.filteredReviews {
+            if let title = review.attributes.title, !title.isEmpty {
+                items.append(TranslatableItem(id: "\(review.id)-title", text: title))
+            }
+            if let body = review.attributes.body, !body.isEmpty {
+                items.append(TranslatableItem(id: "\(review.id)-body", text: body))
+            }
+        }
+        return items
     }
 
     private var filterBar: some View {
@@ -431,9 +590,7 @@ struct ReviewsPageView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, -20)
     }
 }
 

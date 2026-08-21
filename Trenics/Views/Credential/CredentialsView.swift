@@ -142,6 +142,7 @@ struct CredentialsView: View {
                 handleImportResult(result)
             }
         }
+        .dismissesKeyboardOnTap()
     }
 
     private func save() {

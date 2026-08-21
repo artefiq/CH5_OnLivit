@@ -25,13 +25,6 @@ enum AnalyticsError: LocalizedError {
     }
 }
 
-/// One per app, shared by all three analytics pages.
-///
-/// The "find or create the ONGOING request" and "list every report for this
-/// app" calls are per-app, not per-metric — without this, bouncing between
-/// Impressions → Retention → Impressions would redo the whole handshake each
-/// time. Caching it here means a tab switch only costs the instance/segment
-/// download, and even that is usually served from disk.
 @MainActor
 final class AnalyticsSession: ObservableObject {
     let app: AppResource
