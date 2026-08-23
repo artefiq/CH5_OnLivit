@@ -101,42 +101,6 @@ struct ProfileView: View {
                         }
                     }
 
-                    AddAccountRowView(accountsStore: accountsStore)
-
-                    if let selected = accountsStore.selectedAccount {
-                        Button {
-                            isConfirmingLogOut = true
-                        } label: {
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.red.opacity(0.12))
-                                        .frame(width: 40, height: 40)
-
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                        .foregroundColor(.red)
-                                        .font(.body)
-                                        .bold()
-                                }
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Log Out")
-                                        .font(.body)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.red)
-                                    Text(selected.label.isEmpty ? "Unnamed Account" : selected.label)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-                            }
-                            .padding(.vertical, 4)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-
                 } header: {
                     VStack(alignment: .leading, spacing: 16) {
 
@@ -174,6 +138,56 @@ struct ProfileView: View {
                     )
                 } header: {
                     Text("Preferences")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .textCase(nil)
+                        .padding(.horizontal, -12)
+                        .padding(.bottom, 8)
+                }
+                .listRowBackground(Color("cardBGColor"))
+
+                // Sign-in actions kept apart from the account list: adding and
+                // logging out change *which* accounts exist, while the rows
+                // above only change which one is in use.
+                Section {
+                    AddAccountRowView(accountsStore: accountsStore)
+
+                    if let selected = accountsStore.selectedAccount {
+                        Button {
+                            isConfirmingLogOut = true
+                        } label: {
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.red.opacity(0.12))
+                                        .frame(width: 40, height: 40)
+
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .foregroundColor(.red)
+                                        .font(.body)
+                                        .bold()
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Log Out")
+                                        .font(.body)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                    Text(selected.label.isEmpty ? "Unnamed Account" : selected.label)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("Login")
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
