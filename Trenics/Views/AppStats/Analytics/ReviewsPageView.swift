@@ -346,7 +346,7 @@ struct ReviewsPageView: View {
     }
 
     private var ratingHero: some View {
-        AnalyticsSection(title: "Ratings") {
+        AnalyticsSection(title: "Ratings", showsDivider: false) {
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 4) {
                     Text(String(format: "%.2f", model.metrics.average))
@@ -382,6 +382,10 @@ struct ReviewsPageView: View {
                 """
             )
         }
+        .padding(16)
+        .background(Color.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 
     private var sentimentSection: some View {
@@ -440,7 +444,7 @@ struct ReviewsPageView: View {
     @ViewBuilder
     private var themesAndReviews: some View {
         AnalyticsSection(
-            title: "Themes",
+            title: "Themes & Reviews",
             subtitle: "Extracted on-device from your review text — tap one to filter",
             showsDivider: false
         ) {
@@ -458,7 +462,7 @@ struct ReviewsPageView: View {
     @ViewBuilder
     private var themeContent: some View {
         if model.isGeneratingInsights && model.themes.isEmpty {
-            ProgressView().controlSize(.small)
+            AIThinkingRow(style: .insight, text: "Finding what people keep mentioning…")
         } else if !model.themes.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 ThemeTagsView(

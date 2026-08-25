@@ -100,13 +100,7 @@ struct AccountOverviewCard: View {
     @ViewBuilder
     private var narrative: some View {
         if isGeneratingInsight {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(0..<2, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.15))
-                        .frame(height: 12)
-                }
-            }
+            AIThinkingRow(style: .insight, text: "Looking across your apps…")
         } else if let insight {
             VStack(alignment: .leading, spacing: 6) {
                 Text(insight.headline)

@@ -36,12 +36,7 @@ struct ExplainerRow: View {
             if isExpanded {
                 Group {
                     if isGenerating {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("Reading your numbers…")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
+                        AIThinkingRow(style: .insight, text: "Reading your numbers…")
                     } else {
                         Text(generated ?? fallback)
                             .font(.callout)
