@@ -12,9 +12,106 @@ import SwiftUI
 /// Driven by TimelineView rather than repeating animations: each satellite
 /// keeps a steady angular speed, where chained animations drift out of phase
 /// as they restart.
+/// A small rocket, drawn rather than taken from SF Symbols — there is no
+/// rocket glyph on iOS, and asking for one renders nothing at all.
+///
+/// Kept to a nose, body, two fins and a flame; at the sizes this appears,
+/// anything finer turns to mush.
+struct RocketMark: View {
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+
+            ZStack {
+                // Flame, behind the body so the tail overlaps its top edge.
+                Path { p in
+                    p.move(to: CGPoint(x: w * 0.5, y: h * 1.0))
+                    p.addQuadCurve(
+                        to: CGPoint(x: w * 0.30, y: h * 0.80),
+                        control: CGPoint(x: w * 0.32, y: h * 0.95)
+                    )
+                    p.addLine(to: CGPoint(x: w * 0.70, y: h * 0.80))
+                    p.addQuadCurve(
+                        to: CGPoint(x: w * 0.5, y: h * 1.0),
+                        control: CGPoint(x: w * 0.68, y: h * 0.95)
+                    )
+                    p.closeSubpath()
+                }
+                .fill(.orange)
+
+                // Fins, kept close to the body so it doesn't read as a plane.
+                Path { p in
+                    p.move(to: CGPoint(x: w * 0.28, y: h * 0.55))
+                    p.addLine(to: CGPoint(x: w * 0.04, y: h * 0.86))
+                    p.addLine(to: CGPoint(x: w * 0.30, y: h * 0.84))
+                    p.closeSubpath()
+
+                    p.move(to: CGPoint(x: w * 0.72, y: h * 0.55))
+                    p.addLine(to: CGPoint(x: w * 0.96, y: h * 0.86))
+                    p.addLine(to: CGPoint(x: w * 0.70, y: h * 0.84))
+                    p.closeSubpath()
+                }
+                .fill(.tint)
+
+                // Body: sharp nose over a near-parallel barrel.
+                Path { p in
+                    p.move(to: CGPoint(x: w * 0.5, y: 0))
+                    p.addQuadCurve(
+                        to: CGPoint(x: w * 0.74, y: h * 0.50),
+                        control: CGPoint(x: w * 0.74, y: h * 0.20)
+                    )
+                    p.addLine(to: CGPoint(x: w * 0.72, y: h * 0.84))
+                    p.addLine(to: CGPoint(x: w * 0.28, y: h * 0.84))
+                    p.addLine(to: CGPoint(x: w * 0.26, y: h * 0.50))
+                    p.addQuadCurve(
+                        to: CGPoint(x: w * 0.5, y: 0),
+                        control: CGPoint(x: w * 0.26, y: h * 0.20)
+                    )
+                    p.closeSubpath()
+                }
+                .fill(.tint)
+
+                // Porthole, the detail that settles it as a rocket.
+                Circle()
+                    .fill(.white.opacity(0.85))
+                    .frame(width: w * 0.26, height: w * 0.26)
+                    .position(x: w * 0.5, y: h * 0.38)
+            }
+        }
+        .aspectRatio(0.68, contentMode: .fit)
+    }
+}
+
+/// One mark going round the centre.
+struct OrbitSatellite {
+    enum Mark {
+        case symbol(String)
+        case rocket
+    }
+
+    let mark: Mark
+    /// Turns to face its direction of travel. Right for something that flies,
+    /// wrong for a sparkle, which has no front.
+    var facesTravel: Bool = false
+    /// Where the artwork's nose points at zero rotation, measured from "right".
+    /// The drawn rocket points up, so its nose is a quarter turn ahead.
+    var noseOffset: Double = 90
+
+    init(_ symbol: String) {
+        self.mark = .symbol(symbol)
+        self.facesTravel = false
+    }
+
+    init(rocketFacingTravel: Bool) {
+        self.mark = .rocket
+        self.facesTravel = rocketFacingTravel
+    }
+}
+
 struct OrbitLoader: View {
     let centerSymbol: String
-    let satelliteSymbol: String
+    let satellites: [OrbitSatellite]
     let tint: Color
     let palette: [Color]
     var size: CGFloat = 34
@@ -96,9 +193,36 @@ struct OrbitLoader: View {
         // Front half larger and brighter, back half smaller and dimmer.
         let depth = sin(angle)
 
-        return Image(systemName: satelliteSymbol)
-            .font(.system(size: size * orbit.scale * satelliteScale, weight: .semibold))
-            .foregroundStyle(palette[index % palette.count])
+        let satellite = satellites[index % satellites.count]
+        // Tangent to the ellipse at this angle, signed by the direction of
+        // travel, so a rocket on the far side points the way it is going.
+        let heading = atan2(
+            cos(angle) * radius * 0.55 * orbit.speed,
+            -sin(angle) * radius * orbit.speed
+        )
+
+        let markSize = size * orbit.scale * satelliteScale
+        let tint = palette[index % palette.count]
+
+        return Group {
+            switch satellite.mark {
+            case .symbol(let name):
+                Image(systemName: name)
+                    .font(.system(size: markSize, weight: .semibold))
+                    .foregroundStyle(tint)
+            case .rocket:
+                RocketMark()
+                    .tint(tint)
+                    // Bigger than the sparkles: a silhouette with fins needs
+                    // more room than a four-point star to stay readable.
+                    .frame(height: markSize * 1.95)
+            }
+        }
+            .rotationEffect(
+                satellite.facesTravel
+                    ? .radians(heading) + .degrees(satellite.noseOffset)
+                    : .zero
+            )
             .scaleEffect(1 + 0.35 * depth)
             .opacity(0.45 + 0.55 * (depth + 1) / 2)
             .offset(x: x, y: y)
@@ -148,7 +272,11 @@ struct AIThinkingIndicator: View {
     var body: some View {
         OrbitLoader(
             centerSymbol: style.centerSymbol,
-            satelliteSymbol: "sparkle",
+            satellites: [
+                OrbitSatellite("sparkle"),
+                OrbitSatellite(rocketFacingTravel: true),
+                OrbitSatellite("sparkle")
+            ],
             tint: style.tint,
             palette: style.palette,
             size: size,
@@ -206,7 +334,7 @@ struct DataLoadingView: View {
         VStack(spacing: 12) {
             OrbitLoader(
                 centerSymbol: symbol,
-                satelliteSymbol: "circle.fill",
+                satellites: [OrbitSatellite("circle.fill")],
                 tint: Color("primaryPurple"),
                 palette: [
                     Color("primaryPurple"),
