@@ -18,9 +18,7 @@ struct AccountOverviewCard: View {
             if !hasAccount {
                 message("Add an account from your profile to see an overview of your apps.")
             } else if isLoading && !summary.hasData {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
+                DataLoadingView(symbol: "chart.pie.fill", text: "Gathering your numbers…", size: 60)
             } else if !summary.hasData {
                 message("No reviews yet across your apps, so there's nothing to summarise.")
             } else {

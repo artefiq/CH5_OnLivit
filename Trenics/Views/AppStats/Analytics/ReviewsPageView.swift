@@ -281,9 +281,7 @@ struct ReviewsPageView: View {
                     if let errorMessage = model.errorMessage {
                         ErrorBanner(message: errorMessage)
                     } else if model.isLoading && !model.metrics.hasData {
-                        ProgressView("Loading reviews…")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
+                        DataLoadingView(symbol: "star.bubble.fill", text: "Loading reviews…")
                     } else if !model.metrics.hasData {
                         AnalyticsEmptyState(
                             systemImage: "star.bubble",

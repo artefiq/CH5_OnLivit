@@ -180,9 +180,7 @@ struct DashboardView: View {
                 message: "Add an App Store Connect account from your profile to see your apps here."
             )
         } else if viewModel.isLoadingApps && viewModel.apps.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+            DataLoadingView(symbol: "square.stack.3d.up.fill", text: "Loading your apps…")
         } else if viewModel.apps.isEmpty {
             DashboardEmptyState(
                 systemImage: "square.stack.3d.up.slash",

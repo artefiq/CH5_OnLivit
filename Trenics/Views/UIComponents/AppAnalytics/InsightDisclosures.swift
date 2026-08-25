@@ -66,7 +66,7 @@ struct AISummaryDisclosure: View {
             tint: Color("primaryPurple")
         ) {
             if isLoading {
-                AIThinkingRow(style: .insight, text: "Reading your numbers…")
+                AIThinkingBlock(style: .insight, text: "Reading your numbers…")
             } else if findings.isEmpty {
                 Text(unavailableMessage ?? "Not enough data to summarise this period yet.")
                     .font(.callout)
@@ -123,7 +123,7 @@ struct AINextStepDisclosure: View {
             tint: .orange
         ) {
             if isLoading {
-                AIThinkingRow(style: .action, text: "Working out what to do…")
+                AIThinkingBlock(style: .action, text: "Working out what to do…")
             } else if actions.isEmpty {
                 Text("No recommendation for this period.")
                     .font(.callout)

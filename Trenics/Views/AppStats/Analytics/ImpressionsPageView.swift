@@ -296,9 +296,7 @@ struct ImpressionsPageView: View {
                     if let errorMessage = model.errorMessage {
                         ErrorBanner(message: errorMessage)
                     } else if model.isLoading && !model.metrics.hasData {
-                        ProgressView("Loading discovery data…")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
+                        DataLoadingView(symbol: "chart.bar.fill", text: "Loading discovery data…")
                     } else if !model.metrics.hasData {
                         AnalyticsEmptyState(
                             systemImage: "chart.bar.doc.horizontal",
