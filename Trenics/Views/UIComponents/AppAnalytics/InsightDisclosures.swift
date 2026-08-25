@@ -138,7 +138,7 @@ struct AINextStepDisclosure: View {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("•")
                                     .font(.caption.bold().monospacedDigit())
-                                    .foregroundStyle(Color("primaryPurple"))
+                                    .foregroundStyle(.secondary)
                                 Text(text)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
