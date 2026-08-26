@@ -66,7 +66,7 @@ struct AISummaryDisclosure: View {
             tint: Color("primaryPurple")
         ) {
             if isLoading {
-                InsightProgressLine(text: "Reading your numbers…")
+                AIThinkingBlock(style: .insight, text: "Reading your numbers…")
             } else if findings.isEmpty {
                 Text(unavailableMessage ?? "Not enough data to summarise this period yet.")
                     .font(.callout)
@@ -123,7 +123,7 @@ struct AINextStepDisclosure: View {
             tint: .orange
         ) {
             if isLoading {
-                InsightProgressLine(text: "Working out what to do…")
+                AIThinkingBlock(style: .action, text: "Working out what to do…")
             } else if actions.isEmpty {
                 Text("No recommendation for this period.")
                     .font(.callout)
@@ -136,9 +136,9 @@ struct AINextStepDisclosure: View {
                         // is that it can be worked through, not just read.
                         ForEach(Array(action.steps.enumerated()), id: \.offset) { step, text in
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("\(step + 1).")
+                                Text("•")
                                     .font(.caption.bold().monospacedDigit())
-                                    .foregroundStyle(Color("primaryPurple"))
+                                    .foregroundStyle(.secondary)
                                 Text(text)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
@@ -170,18 +170,5 @@ private struct NumberedItem<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct InsightProgressLine: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ProgressView().controlSize(.small)
-            Text(text)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
     }
 }

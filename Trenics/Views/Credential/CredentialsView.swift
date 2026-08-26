@@ -20,6 +20,7 @@ struct CredentialsView: View {
     @State private var privateKeyPEM: String
 
     @State private var isImporterPresented = false
+    @State private var isGuidePresented = false
     @State private var statusMessage: String?
     @State private var errorMessage: String?
 
@@ -120,7 +121,9 @@ struct CredentialsView: View {
                 Section {
                     VStack(spacing: 16) {
                         Button("􀁜 How do I get my Private Key?") {
-                            isImporterPresented = true
+                            // Was opening the file importer, which is the step
+                            // *after* you already have a key.
+                            isGuidePresented = true
                         }
 
                         PrimaryButton(title: "Save") {
@@ -140,6 +143,9 @@ struct CredentialsView: View {
                 allowsMultipleSelection: false
             ) { result in
                 handleImportResult(result)
+            }
+            .sheet(isPresented: $isGuidePresented) {
+                PrivateKeyGuideSheet()
             }
         }
         .dismissesKeyboardOnTap()

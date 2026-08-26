@@ -306,9 +306,7 @@ struct RetentionPageView: View {
                     if let errorMessage = model.errorMessage {
                         ErrorBanner(message: errorMessage)
                     } else if model.isLoading && !model.metrics.hasData {
-                        ProgressView("Loading retention data…")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
+                        DataLoadingView(symbol: "arrow.trianglehead.counterclockwise", text: "Loading retention data…")
                     } else if !model.metrics.hasData {
                         AnalyticsEmptyState(
                             systemImage: "arrow.trianglehead.counterclockwise",

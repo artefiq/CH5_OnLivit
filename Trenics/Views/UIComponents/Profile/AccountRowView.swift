@@ -35,14 +35,29 @@ struct AccountRowView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text(
-                    account.issuerId.isEmpty
-                    ? "No Issuer ID"
-                    : "Issuer: \(account.issuerId)"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                HStack(spacing: 6) {
+                    // Spelled out rather than left to the checkmark alone,
+                    // which people were not reading as "this one is in use".
+                    if isSelected {
+                        Text("Active")
+                            .font(.caption2.bold())
+                            .foregroundStyle(Color("primaryPurple"))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color("primaryPurple").opacity(0.15))
+                            )
+                    }
+
+                    Text(
+                        account.issuerId.isEmpty
+                        ? "No Issuer ID"
+                        : "Issuer: \(account.issuerId)"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                }
             }
 
             Spacer()

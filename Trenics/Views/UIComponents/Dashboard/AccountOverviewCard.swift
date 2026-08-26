@@ -18,9 +18,7 @@ struct AccountOverviewCard: View {
             if !hasAccount {
                 message("Add an account from your profile to see an overview of your apps.")
             } else if isLoading && !summary.hasData {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
+                DataLoadingView(symbol: "chart.pie.fill", text: "Gathering your numbers…", size: 60)
             } else if !summary.hasData {
                 message("No reviews yet across your apps, so there's nothing to summarise.")
             } else {
@@ -100,13 +98,7 @@ struct AccountOverviewCard: View {
     @ViewBuilder
     private var narrative: some View {
         if isGeneratingInsight {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(0..<2, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.15))
-                        .frame(height: 12)
-                }
-            }
+            AIThinkingRow(style: .insight, text: "Looking across your apps…")
         } else if let insight {
             VStack(alignment: .leading, spacing: 6) {
                 Text(insight.headline)
